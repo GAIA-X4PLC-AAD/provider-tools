@@ -1,12 +1,12 @@
 {
-	"name" : "xodr_reducer",
+	"name" : "asset_reducer",
 	"environment type" : "python",
 	"data folder" : "services",
 	"asset types" :	[
 		{ "extension" : "xodr" }
 	],
 	"params" : 	{
-		"call" : "../xodr_reducer/main.py",
+		"call" : "../asset_reducer/main.py",
 		"output" : {"-out" : "{path}/{sub_path}/{name}.bjson"},
 		"output format" : "bjson"
 	}

@@ -1,0 +1,16 @@
+{
+	"name" : "validator",
+	"environment type" : "python",
+	"data folder" : "validation",
+	"asset types" :	[
+		{ "extension" : "xodr" },
+		{ "extension" : "xosc" }
+	],
+	"params" : 	{
+		"call" : "../OpenValidator/main.py",
+		"output" : {"-o" : "{path}/{sub_path}/"},
+		"additional" : {
+			"-t" : "json"
+		}
+	}
+}

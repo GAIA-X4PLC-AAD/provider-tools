@@ -1,0 +1,61 @@
+{
+    "general": {
+        "author": "GAIA-X - generate_osc_metadata.py by DLR",
+        "comment": "Automatically generated metadata by generate_osc_metadata.py ©DLR",
+        "name": "Override Scenario Name"
+    },
+    "map": {
+        "location": "https://fancy.maps.com/xodr.map"
+    },
+    "openlabel": {
+        "ontologies": {
+            "openlabel": {
+                "uri": "https://openlabel.asam.net/V1-0-0/ontologies/openlabel_ontology_scenario_tags.ttl"
+            },
+            "setlevel": {
+                "uri": "https://github.com/GAIA-X4PLC-AAD/map-and-scenario-data/blob/main/ontologies/setlevel/setlevel.ttl"
+            },
+            "gaiax": {
+                "uri": "https://github.com/GAIA-X4PLC-AAD/map-and-scenario-data/blob/main/ontologies/gaiax4plc/gaiax4plc_meta_auto.ttl"
+            }
+        },
+        "tags": {
+            "authorEmail": "fin.heuer@dlr.de",
+            "authorURL": "https://www.dlr.de",
+            "licenseURI": "https://github.com/GAIA-X4PLC-AAD/testbed-data-DLR/blob/main/LICENSE",
+            "scenarioDefinition": "OpenSCENARIO 1.1",
+            "scenarioDefinitionLanguageURI": "https://www.asam.net/static_downloads/ASAM_OpenSCENARIO_V1.2.0_Model_Documentation/modelDocumentation/",
+            "scenarioParentReference": "-",
+            "scenarioUniqueReference": "5dd4aeab-8410-4e64-b35a-6405219205db",
+            "scenarioVisualisationURL": "-",
+            "subjectVehicle": "1662333941508374"
+        },
+        "simpleTags": [
+            "EnvironmentConnectivity",
+            "ConnectivityCommunication",
+            "CommunicationV2v",
+            "V2vCellular",
+            "V2vSatellite",
+            "V2vWifi",
+            "CommunicationV2i",
+            "V2iCellular",
+            "V2iSatellite",
+            "V2iWifi",
+            "ConnectivityPositioning",
+            "PositioningGalileo",
+            "PositioningGlonass",
+            "PositioningGps",
+            "EnvironmentParticulates",
+            "ParticulatesMarine",
+            "ParticulatesWater",
+            "ParticulatesDust",
+            "ParticulatesPollution",
+            "ParticulatesVolcanic",
+            "RainType",
+            "RainTypeDynamic",
+            "RainTypeConvective",
+            "RainTypeOrographic",
+            "ArtificialVehicleLighting"
+        ]
+    }
+}

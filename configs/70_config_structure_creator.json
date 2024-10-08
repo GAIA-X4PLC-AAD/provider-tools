@@ -1,0 +1,17 @@
+{
+	"name" : "structure_creator",
+	"environment type" : "python",
+	"data folder" : "temp",
+	"asset types" :	[
+		{ "extension" : "xodr" },
+		{ "extension" : "xosc" }
+	],
+	"params" : 	{
+		"call" : "../structure_creator/main.py",
+		"input" : {"" : "../../upload/uploadedFiles.json"},
+		"output" : {"-out" : "{path}/{sub_path}/{name}_structure.json"},
+		"additional" : {
+			"-path" : "{path}"
+		}	
+	}
+}

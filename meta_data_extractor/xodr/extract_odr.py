@@ -1,0 +1,402 @@
+from sympy import symbols, solveset
+from lxml import etree
+from pathlib import Path
+from datetime import datetime
+from typing import Tuple
+from extractor import get_position_from_osm, proj4_to_epsg, convert_to_LatLon
+
+import logging
+
+
+def container_in_str(data: any) -> str:
+    string = ''
+    for value in data:
+        if value is not None:
+            string = string + f' {value}'
+    return string
+
+def convert_date_time(date_string, supported_syntax):
+    for syntax in supported_syntax:
+        try:
+            date = datetime.strptime(date_string, syntax)
+            return date.isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+
+#######################################################################################################################
+def get_meta_data(file_path: str, default_value: str) -> dict:
+
+    root = etree.parse(file_path).getroot()
+
+    unknown_unit = "unknown unit"
+
+    # get data used several times
+    data = dict()
+    content_dict = dict()
+    format_dict = dict()
+    quantity_dict = dict()
+
+    # read xml and extract header data
+    data['header'] = root.find('.//header').attrib if check_data(root, ".//header") else None
+    if check_data(root,".//header//geoReference"):
+        data['header']['geoReference'] = root.find('.//header//geoReference').text
+
+    # read xml and extract all elevation data
+    data['elevation'] = [elevation.attrib for elevation in root.findall('.//elevation')]
+
+    # read xml and extract object data
+    data['object'] = [obj.attrib for obj in root.findall('.//object')] if check_data(root, ".//object") else None
+
+    # readable meta data
+    # read xml and search for CRG and read the element file         # TODO Testing
+    data_links = container_in_str(set([crg.attrib['file'] for crg in root.findall('.//CRG')])) if check_data(root, ".//CRG","file") else ''# default_value
+    #if data_links:
+    #    meta_data_dict['data_link'] = {}
+
+    # read xml and search for speed and the element max --> then sort by max and create a set --> set == unique values
+    quantity_dict['hdmap:speedLimit'] = container_in_str(sorted(set((max.attrib['max'] for max in root.findall('.//speed'))))) if check_data(root, ".//speed","max") else {0, 50}
+
+    # read xml and check if lane and its element type exists --> take all information of lane type and make them unique
+    lane_types = set([lane.attrib['type'] for lane in root.findall('.//lane')]) if check_data(root, ".//lane","type") else None
+    if lane_types:
+        content_dict['hdmap:laneTypes'] = list(lane_types)
+
+    # read xml and check if road and its element type exists --> take all information of road type and make them unique 
+    road_types = set([road_type.attrib['type'] for road_type in root.findall('./road/type')]) if check_data(root,"./road/type","type") else None
+    if road_types:
+        content_dict['hdmap:roadTypes'] = list(road_types)
+
+    # create a unique list of object type if it exists
+    objects = set([obj['type'] for obj in data['object']]) if check_data(root, ".//object", "type") else None
+    if objects:
+        content_dict['hdmap:levelOfDetail'] = list(objects)
+
+    # search for revMajor and revMinor and create the format_version string
+    format_dict['hdmap:version'] = str(data['header']['revMajor']) + '.' + str(data['header']['revMinor']) if check_data(root, ".//header", "revMajor", "revMinor") else default_value
+    format_dict['hdmap:formatType'] = 'OpenDRIVE'
+
+    # read xml and create a list with all lengths
+    list_of_lengths = [float(road.attrib['length']) for road in root.findall('.//road')] if check_data(root,".//road","length") else default_value
+
+    # search for needed information
+    #meta_data_dict['vendor_name'] = data['header']['vendor'] if check_data(root, ".//header","vendor") else default_value
+    # convert to datetime object
+    general_dict = dict()
+    general_data_dict = dict()
+    try:        
+        supported_date_syntax = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y", "%Y/%m/%d", "%d.%m.%Y", "%m/%d/%Y"]
+        general_data_dict['general:recordingTime'] = convert_date_time(data['header']['date'], supported_date_syntax) if check_data(root,".//header","date") else default_value
+        general_dict['general:data'] = general_data_dict
+    except:
+        logging.error('cannot extract date')
+    
+    # parse string of georeference
+    # set all values to default
+    geo_reference = None
+    if 'header' in data and 'geoReference' in data['header']:
+        geo_reference = data['header']['geoReference']
+    geodetic_ref_system_dict = dict()
+    lat = default_value
+    lon = default_value
+
+    if geo_reference:
+        geo_data = geo_reference.split(' ')
+
+        # go through the string and parse data if available
+        local_data_dict = dict()
+        local_data_dict['projection_type'] = ''
+        for information in geo_data:
+            if information.startswith("+proj="):
+                local_data_dict['projection_type'] = local_data_dict['projection_type'] + (information.split("+proj=")[1])
+            elif information.startswith("+grids="):
+                geodetic_ref_system_dict['georeference:heightSystem'] = information.split("+grids=")[1]
+            elif information.startswith("+datum="):
+                local_data_dict['geodetic_datum'] = information.split("+datum=")[1]
+            elif information.startswith("+units="):
+                local_data_dict['geodetic_unit'] = information.split("+units=")[1]
+            elif information.startswith("+lat_0="):
+                lat = information.split("+lat_0=")[1]
+            elif information.startswith("+lon_0="):
+                lon = information.split("+lon_0=")[1]
+
+        # if lat and lon was found create string for origin
+        if lat != default_value and lon != default_value:
+            coordinate_2D_dict = dict()
+            coordinate_2D_dict['georeference:x'] = str(lon)
+            coordinate_2D_dict['georeference:y'] = str(lat)
+            geodetic_ref_system_dict['georeference:origin'] = coordinate_2D_dict
+
+        epsg_code = proj4_to_epsg(geo_reference)
+        if epsg_code:
+            geodetic_ref_system_dict['georeference:coordinateSystem'] = epsg_code
+
+    ###################################################################################################################
+    # calculated meta data
+
+    # read xml and count the amount of junctions/intersection
+    quantity_dict['hdmap:numberIntersections'] = len(root.findall('.//junction')) if check_data(root,".//junction") else 0
+
+    # read xml and count the amount of outlines
+    quantity_dict['hdmap:numberOutlines'] = len(root.findall('.//outline')) if check_data(root, ".//outline") else 0
+
+    # add all lengths /1000 -->from meters to kilometers
+    quantity_dict['hdmap:length'] = float(sum(list_of_lengths) / 1000) if len(list_of_lengths) else 0.0
+    #meta_data_dict['length_unit'] = 'km'
+
+    # call function get_elevation_range with elevation data
+    quantity_dict['hdmap:elevationRange'] = float(get_elevation_range(root, data['elevation'], list_of_lengths))
+    #meta_data_dict['elevation_range_unit'] = 'm'
+
+    # count the amount of objects
+    quantity_dict['hdmap:numberObjects'] = len(data['object']) if data['object'] is not None else 0
+
+    # check if object has the element subtype and count the amount of subtype == trafficLight
+    quantity_dict['hdmap:numberTrafficLights'] = len([obj for obj in data['object'] if obj['subtype'] == 'trafficLight']) if check_data(root, './/object','subtype') else 0
+
+    # check if object has the element subtype and count the amount of subtype == trafficSign
+    quantity_dict['hdmap:numberTrafficSigns'] = len([obj for obj in data['object'] if obj['subtype'] == 'trafficSign']) if check_data(root, './/object','subtype') else 0
+
+    ###################################################################################################################
+    # constant meta data
+
+    # if it is a xodr file it describes road network
+    general_description_dict = dict()
+    general_description_dict['gx:description'] = "road network"
+    general_description_dict['gx:name'] = file_path.name.replace('.xodr', '')
+    general_dict['general:description'] = general_description_dict
+
+    # xodr files are from Opendrive and here is their link
+    #meta_data_dict['data_format'] = "Opendrive (link= https://www.asam.net/standards/detail/opendrive/)"    
+    format_dict['hdmap:type'] = 'ASAM OpenDRIVE'
+
+    # bounding
+    georeference_dict = dict()
+    if geo_reference:
+        projection_location_dict = dict()
+        georeference_dict['georeference:projectlocation'] = projection_location_dict
+        bounding_dict = dict()
+        bounding_dict['xMin'] = float(root.find('.//header').attrib['west']) if check_data(root, ".//header", "west") else unknown_unit
+        bounding_dict['xMax'] = float(root.find('.//header').attrib['east']) if check_data(root, ".//header", "east") else unknown_unit
+        bounding_dict['yMin'] = float(root.find('.//header').attrib['south']) if check_data(root, ".//header", "south") else unknown_unit
+        bounding_dict['yMax'] = float(root.find('.//header').attrib['north']) if check_data(root, ".//header", "north") else unknown_unit    
+        bounding_dict['xMin'], bounding_dict['yMin'] = convert_to_LatLon(bounding_dict['xMin'], bounding_dict['yMin'], geo_reference)
+        bounding_dict['xMax'], bounding_dict['yMax'] = convert_to_LatLon(bounding_dict['xMax'], bounding_dict['yMax'], geo_reference)
+        bounding_data_dict = dict()
+        bounding_data_dict['georeference:xMin'] = bounding_dict['xMin']
+        bounding_data_dict['georeference:yMin'] = bounding_dict['yMin']
+        bounding_data_dict['georeference:xMax'] = bounding_dict['xMax']
+        bounding_data_dict['georeference:yMax'] = bounding_dict['yMax']
+        projection_location_dict['georeference:boundingbox'] = bounding_data_dict
+
+        # get country, state, town from OSM
+        center_x = (bounding_dict['xMin'] + bounding_dict['xMax']) * 0.5
+        center_y = (bounding_dict['yMin'] + bounding_dict['yMax']) * 0.5
+        get_position_from_osm(projection_location_dict, center_x, center_y)
+
+    ###################################################################################################################
+    # unfinished meta data
+    
+    #meta_data_dict['range_of_modeling'] = 0.0 #"Wie ermittelt man das?"
+    #meta_data_dict['general:recordingTime'] = meta_data_dict['vendor_date']#.strftime("%Y-%m-%d %H:%M:%S")
+    # TODO get from traffic rule
+    content_dict['hdmap:trafficDirection'] = "right TODO"
+
+
+    #data = {}
+    
+    
+    meta_data_dict = dict()
+    meta_data_dict['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
+    meta_data_dict[f'{get_schema_name().lower()}:content'] = content_dict
+    meta_data_dict[f'{get_schema_name().lower()}:format'] = format_dict
+    if len(georeference_dict):
+        meta_data_dict[f'{get_schema_name().lower()}:georeference'] = georeference_dict
+    meta_data_dict[f'{get_schema_name().lower()}:general'] = general_dict
+
+    #data[f'{get_namespace()}:{get_schema_name().lower()}'] = meta_data_dict
+
+    return meta_data_dict
+
+
+#######################################################################################################################
+
+
+# function to check if the path is in xml file and if the element is in the certain path
+def check_data(root, path: str, *elements) -> bool:
+    try:
+        # finding the first instance of the path. if no instance is found 'None' is returned
+        entries = root.find(path)
+
+        # if the path is not existing
+        if entries is None:
+            return False
+
+        # as elements is a vararg iterate through it
+        if len(elements) != 0:
+            # go through every element and try to reach it
+            for element in elements:
+                entries.attrib[element]  # as we only want to reach it we don't need to store it
+        return True
+
+    # if xpath is not in current xml file there will be a key error
+    except KeyError:
+        return False
+
+    # if one of the elements is not in current xml path at the certain xpath there will be a value error
+    except ValueError:
+        return False
+
+    # if the entry doesn't have the elements there will be a attribute error
+    except AttributeError:
+        return False
+
+
+#######################################################################################################################
+
+
+# function to get all functions and differentiation of the elevations
+def get_elevation_functions(a, b, c, d, s):
+    # declare x as a variable
+    x = symbols('x')
+
+    # build the function as described in opendrive --> elev(ds) = a + b*ds + c*ds² + d*ds³
+    # link: https://releases.asam.net/OpenDRIVE/1.6.0/ASAM_OpenDRIVE_BS_V1-6-0.html#_methods_of_elevation
+    expression = a + b * x + c * x**2 + d * x**3
+
+    # derive the function by hand
+    differentiation = b + 2 * c * x + 3 * d * x**2
+
+    return [s, expression, differentiation]
+
+
+#######################################################################################################################
+# function to get the max and min value of the certain section of the function
+def get_elevation_min_max(start, end, expr, diff):
+    # declare x as a variable
+    x = symbols('x')
+    # use start as x to get the value of the front border
+    start_value = expr.subs(x, 0)
+    # use end as x to get the value of the back border
+    end_value = expr.subs(x, end-start)
+    # get the potential min and max value
+    candidates = []
+    # if diff is 0 do not search for results as 0 = 0
+    if diff != 0:
+        solveset(diff)
+    candidate_value = []
+    if len(candidates) != 0:
+        for candidate in candidates:
+
+            # check if the candidate is between the front and back border
+            if 0 <= candidate <= end-start:
+                # if so --> use candidate as x and get the value
+                candidate_value.append(expr.subs({x: candidate}))
+
+        if len(candidate_value) != 0:
+            # get of all candidates the minimum
+            min_candidate = min(candidate_value)
+            # get of all candidates the maximum
+            max_candidate = max(candidate_value)
+
+            # return the min and max value of candidate, front and back border
+            return [min(start_value, end_value, min_candidate), max(start_value, end_value, max_candidate)]
+        else:
+            # if there are any candidates valid --> get the min and max from front and back border
+            return [min(start_value, end_value), max(start_value, end_value)]
+    else:
+        # if there are no candidates then just take the min and max from front and back border
+        return [min(start_value, end_value), max(start_value, end_value)]
+
+
+#######################################################################################################################
+# function to shorten the code in main
+def get_elevation_range(root, elevations, list_of_lengths):
+    result_min = 0.0
+    result_max = 0.0
+
+    # check if xml file has elevation and those elements
+    if check_data(root, ".//elevation", "a", "b", "c", "d", "s"):
+
+        all_functions = []
+        # go through every elevation and get their functions
+        for elevation in elevations:
+            all_functions.append(
+                get_elevation_functions(float(elevation['a']), float(elevation['b']), float(elevation['c']),
+                                        float(elevation['d']), float(elevation['s'])))
+
+        road_counter = 0
+
+        # go through every function and calculate their min and max
+        for ind, function in enumerate(all_functions):
+            start = function[0]
+
+            # get length --> to know the end
+            length = len(all_functions)
+            # get the function
+            expr = function[1]
+            # get the differentiation
+            diff = function[2]
+
+            # to get the end of the current elevation --> take the start of the following
+            # if current is last elevation or following elevation restarted in 0 --> take the current length of road
+            if ind + 1 == length or all_functions[ind + 1][0] == 0:
+                end = list_of_lengths[road_counter]
+                road_counter += 1
+            else:
+                end = all_functions[ind + 1][0]
+
+            # call function to gen min and max
+            min_val, max_val = get_elevation_min_max(start, end, expr, diff)
+
+            if result_min == 0.0 and result_max == 0.0:
+                result_min = min_val
+                result_max = max_val
+            else:
+                # get current min and max and compare them with min and max in result_data
+                result_min = min(result_min, min_val)
+                result_max = max(result_max, max_val)
+
+    return result_max - result_min
+
+
+#######################################################################################################################
+def extract_meta_data(file: Path) ->Tuple[bool, dict]:
+    # read file
+    logging.debug(f'Loading input file {file.absolute()}')
+    try: 
+        with open(file, 'r') as f:
+            _ = f.read()
+    except:
+        logging.exception(f'Cannot read file {file.absolute()}')
+        return False
+    
+    # parse xml
+    try: 
+        root = etree.parse(str(file), etree.XMLParser(dtd_validation=False))
+    except:
+        logging.exception(f'Cannot parse XML from file {file.absolute()}')
+        return False
+    
+    # ask in file dialog for file with given file extension -->close program if interrupted
+    try:
+        attributes = get_meta_data(file, "Unknown")
+    except:
+        logging.exception(f'Cannot extract from file {file.absolute()}')
+        return False
+    
+    logging.info(f'Extract from file {file}')
+    return True, attributes
+    
+
+def get_description() -> str:
+    return 'extract OpenDrive'
+
+
+def get_schema_name() -> str:
+    return 'HDMap'
+
+def get_namespace() -> str:
+    return 'hdmap'

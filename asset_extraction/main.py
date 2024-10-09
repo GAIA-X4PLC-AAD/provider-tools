@@ -99,8 +99,11 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
 
 def create_zip(output_dir: Path, zip_filename : Path):
     with ZipFile(zip_filename, 'w') as zipf:
-        for file_path in output_dir.rglob('*'):
+        for file_path in output_dir.rglob('*'):            
             if file_path.is_file():
+                filename = str(file_path.name)
+                if filename == 'manifest.json' or filename == 'asset.zip':
+                    continue
                 file_local = file_path.relative_to(output_dir)
                 zipf.write(file_path, file_local)
 
@@ -149,10 +152,10 @@ def main():
     temp_path = output_sub_dir / 'temp'
     shutil.rmtree(temp_path)
     # create zip
-    zip_filename = output_dir / f"{asset_name}.zip"
+    zip_filename = output_sub_dir / f"asset.zip"
     create_zip(output_sub_dir, zip_filename)
     # remove zipped folder
-    shutil.rmtree(output_sub_dir)
+    #shutil.rmtree(output_sub_dir)
 
 if __name__ == "__main__":
     main()

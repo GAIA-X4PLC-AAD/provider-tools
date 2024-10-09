@@ -12,7 +12,9 @@ extensions = {
     'doc': 'Document',
     'geojson': 'Routing',
     'json': 'Data',
-    'xml': 'Data'
+    'xml': 'Data',
+    'bjson' : 'Service', 
+    'zip' : 'Asset'
 }
 
 type_data = {
@@ -29,7 +31,7 @@ type_data = {
         'mask' : '{asset}_technicalDocumentation'
     }, 
     'License' : {
-        'folder' : 'documentation',
+        'folder' : '',
         'mask' : 'LICENSE'
     },
     'Metadata' : {
@@ -77,8 +79,20 @@ def get_file(user_data, filename: Path) -> Path:
             return file
     return None
 
+def register_asset(data: dict, filename: Path, role: str, category: str):
+    files = []   
 
-def register_data(data: dict, user_data: dict, path: Path, role: str, category: str):
+    file_data = {}
+    file_data['manifest:accessRole'] = role
+    file_data['manifest:relativePath'] = str(filename)
+    file_data['manifest:type'] = get_data_typ(filename)
+    file_data['manifest:format'] = filename.suffix.lstrip('.')
+    files.append(file_data)
+
+    data[category] = files
+
+
+def register_data(data: dict, user_data: dict, path: Path, data_path: Path, role: str, category: str):
     if not path.exists():
         return
     
@@ -88,7 +102,8 @@ def register_data(data: dict, user_data: dict, path: Path, role: str, category: 
             continue
         file_data = {}
         file_data['manifest:accessRole'] = role
-        file_data['manifest:relativePath'] = str(filename)
+        relative_path = filename.relative_to(data_path).as_posix()
+        file_data['manifest:relativePath'] = str(relative_path)
         file = get_file(user_data, filename.name)
         if file:
             typ = file['type']
@@ -154,9 +169,9 @@ def main():
     with open(user_input_file, 'r') as file:
         user_data = json.load(file)
 
-    # get asset name
+    # get asset name from Data entry
     for file in user_data:
-        if file['type'] == 'Asset':
+        if file['type'] == 'Data':
             asset_name = Path(file['filename'])
             asset_name = asset_name.stem
             break
@@ -198,13 +213,18 @@ def main():
     data_group = {}
     data['manifest:links'] = data_group
     for sub_folder in data_path.iterdir():
-        if sub_folder == 'data':
+        relative_path = str(sub_folder.relative_to(data_path))
+        if relative_path == 'data':
             type = 'manifest:data'
             role = 'owner'
+        elif relative_path == 'temp':
+            continue
         else:
             type = 'manifest:media'
             role = 'publicUser'
-        register_data(data_group, user_data, sub_folder, role, type)
+        register_data(data_group, user_data, sub_folder, data_path, role, type)
+    # add asset zip
+    register_asset(data_group, Path('asset.zip'), 'owner', 'manifest:asset')     
 
     # write metadata json 
     path = filename_out.parent

@@ -40,7 +40,7 @@ def check_data_type(value, type_string: str, key: str) ->bool:
         
         # extract 'type' from dataTypeMap before using it in the f-string
         expected_type = dataTypeMap[type_string]['type']
-        suported_type = f"<class '{expected_type}'>"
+        suported_type = f'<class "{expected_type}">'
         if type_value == suported_type:
             return True
         elif isinstance(value, list):
@@ -171,7 +171,7 @@ def create_group(as_list, node_path_name, node_path, schema_name, json_dict, lev
         group = dict()
         group['@type'] = convert_path_to_namespace(node_path, False, schema_name)
         #logging.debug(f'{' ' * level * 3}add dict {node_path_name}')
-        logging.debug(f'{" " * level * 3}add list {node_path_name}')  
+        logging.debug(f'{" " * level * 3}add dict {node_path_name}')  
 
     if register:
         json_dict[node_path_name] = group

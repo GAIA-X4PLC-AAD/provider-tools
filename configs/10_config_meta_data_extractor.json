@@ -7,7 +7,7 @@
 		{ "extension" : "xosc" }
 	],
 	"params" : 	{
-		"call" : "../meta_data_extractor/main.py",
+		"call" : "meta_data_extractor/main.py",
 		"output" : { "-out" : "{path}/temp/{name}_extractor.json"}
 	}
 }

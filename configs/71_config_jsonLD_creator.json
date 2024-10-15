@@ -7,7 +7,7 @@
 		{ "extension" : "xosc" }
 	],
 	"params" : 	{
-		"call" : "../jsonLD_creator/main.py",
+		"call" : "jsonLD_creator/main.py",
 		"input" : {"" : "{path}/temp/{name}_structure.json"},
 		"output" : {"-out" : "{path}/manifest.json"},
 		"additional" : {

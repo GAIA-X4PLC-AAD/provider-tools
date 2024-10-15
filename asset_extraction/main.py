@@ -37,7 +37,9 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
     # prepare script path
     script_path = Path(script_config['params']['call'])
     if not script_path.is_absolute():  # is no absolute path
-        script_path = script_path.resolve()  # convert to absolute
+        parent_dir = Path(__file__).parent.parent
+        #script_path = script_path.resolve()  # convert to absolute
+        script_path = (parent_dir / script_path).resolve()
     if not script_path.exists():
         raise FileNotFoundError(f"Script not found: {script_path}")
     

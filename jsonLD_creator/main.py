@@ -36,7 +36,11 @@ def check_data_type(value, type_string: str, key: str) ->bool:
     if type_string in dataTypeMap:
         
         type_value = str(type(value))
-        suported_type = f'<class \'{dataTypeMap[type_string]['type']}\'>'
+        #suported_type = f'<class \'{dataTypeMap[type_string]['type']}\'>'
+        
+        # extract 'type' from dataTypeMap before using it in the f-string
+        expected_type = dataTypeMap[type_string]['type']
+        suported_type = f"<class '{expected_type}'>"
         if type_value == suported_type:
             return True
         elif isinstance(value, list):

@@ -164,11 +164,15 @@ def create_group(as_list, node_path_name, node_path, schema_name, json_dict, lev
     # create group
     if as_list:
         group = list()
-        logging.debug(f'{' ' * level * 3}add list {node_path_name}')
+        #logging.debug(f'{' ' * level * 3}add list {node_path_name}')
+        logging.debug(f'{" " * level * 3}add list {node_path_name}')  
+
     else:
         group = dict()
         group['@type'] = convert_path_to_namespace(node_path, False, schema_name)
-        logging.debug(f'{' ' * level * 3}add dict {node_path_name}')
+        #logging.debug(f'{' ' * level * 3}add dict {node_path_name}')
+        logging.debug(f'{" " * level * 3}add list {node_path_name}')  
+
     if register:
         json_dict[node_path_name] = group
     return group
@@ -242,10 +246,10 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
         
         # register
         if isinstance(group, list):
-            logging.debug(f'{' ' * level * 3}add prop {prop_path}')
+            logging.debug(f'{" "  * level * 3}add prop {prop_path}')
             prop_group[prop_path.lower()] = property
         else:
-            logging.debug(f'{' ' * level * 3}add prop {prop_path}')
+            logging.debug(f'{" " * level * 3}add prop {prop_path}')
             group[prop_path.lower()] = property
     
     if isinstance(group, list):

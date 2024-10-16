@@ -1,3 +1,14 @@
+import debugpy
+
+# debugpy, listening on port 5678
+debugpy.listen(("0.0.0.0", 5678))
+print("Waiting for debugger to attach...")
+
+debugpy.wait_for_client()
+
+debugpy.breakpoint()
+
+
 from datetime import datetime
 from rdflib.namespace import SH, RDF
 from rdflib import Graph, URIRef

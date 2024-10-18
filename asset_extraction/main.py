@@ -9,10 +9,16 @@ from zipfile import ZipFile
 
 def load_configs(config_dir: Path) -> list:
     configs = []
-    for filename in config_dir.iterdir():
-        if filename.suffix == '.json':
-            with open((config_dir / filename), 'r') as file:
-                configs.append(json.load(file))
+    
+    # Sort the filenames by their numeric prefix
+    #sorted_filenames = sorted(config_dir.glob('*.json'), key=lambda f: int(f.stem.split('_')[0]))
+    sorted_filenames = sorted(config_dir.glob('*.json'))
+
+    for filename in sorted_filenames:
+        with open((config_dir / filename), 'r') as file:
+            print(filename)
+            configs.append(json.load(file))
+    
     return configs
 
 
@@ -89,6 +95,7 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
     # run
     try:
         print(f"start command {script_config['name']}")
+        print(script_call)
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
         print(f"end command {script_config['name']} succeeded with output:")
         print(result.stdout)  # print default output from sub process
@@ -124,6 +131,9 @@ def main():
         print (f'config path {config_dir} not exists')
         exit(1)
     configs = load_configs(config_dir)
+    print('configs: ')
+    print(configs)
+
 
     # Determine asset type (e.g., ".xodr")
     asset_file = Path(args.filename)
@@ -145,6 +155,7 @@ def main():
     output_sub_dir.mkdir(parents=True, exist_ok=True)
     print (f'output path {output_sub_dir}')  
 
+    #print(applicable_scripts)
     # Execute each script and collect outputs
     for script_config in applicable_scripts:
         execute_script(script_config, asset_file, output_sub_dir)

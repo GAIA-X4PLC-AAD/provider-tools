@@ -1,12 +1,12 @@
-import debugpy
+#import debugpy
 
 # debugpy, listening on port 5678
-debugpy.listen(("0.0.0.0", 5678))
-print("Waiting for debugger to attach...")
+#debugpy.listen(("0.0.0.0", 5678))
+#print("Waiting for debugger to attach...")
 
-debugpy.wait_for_client()
+#debugpy.wait_for_client()
 
-debugpy.breakpoint()
+#debugpy.breakpoint()
 
 
 from datetime import datetime

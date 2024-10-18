@@ -1,0 +1,61 @@
+{
+    "header": {
+        "attributes" : ["revMajor", "revMinor", "name", "date", "vendor","north","east","south","west"]
+    },
+    "geoReference": {
+        "attributes" : []
+    },
+    "road": {
+        "attributes" : ["id", "length"]
+    },
+    "predecessor": {
+        "attributes" : ["elementType", "elementId","contactPoint"]
+    },
+    "successor": {
+        "attributes" : ["elementType", "elementId","contactPoint"]
+    },
+    "type": {
+        "attributes" : ["type"]
+    },
+    "geometry": {
+        "attributes" : ["hdg", "length"]
+    },
+    "elevationProfile" : {
+        "function" : ["calcExtrema", "elevation"]
+    },
+    "superelevation": {
+        "attributes" : []
+    },
+    "laneOffset": {
+        "attributes" : []
+    },
+    "laneSection": {
+        "attributes" : ["s"]
+    },
+    "lane": {
+        "attributes" : ["id", "type"] ,
+        "function" : ["calcExtrema", "width"]
+    },
+    "speed" : {
+        "attributes" : ["sOffset"]
+    },
+    "object": {
+        "attributes" : ["type", "subtype","name","s","t"]
+    },
+    "signal": {
+        "attributes" : ["type", "subtype","value","name","s","t"]
+    },
+    "junction": {
+        "attributes" : ["id","type"]
+    },
+    "connection": {
+        "attributes" : ["incomingRoad","connectingRoad","contactPoint"]
+    },
+    "laneLink" : {
+        "attributes" : ["from","to"]
+    },
+    "CRG":{
+        "attribute":[]
+    }
+
+}

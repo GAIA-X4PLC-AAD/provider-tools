@@ -169,9 +169,11 @@ def main():
     with open(user_input_file, 'r') as file:
         user_data = json.load(file)
 
+    # initialize asset_name
+    asset_name = None
     # get asset name from Data entry
     for file in user_data:
-        if file['type'] == 'Data':
+        if file['type'] == 'Asset':
             asset_name = Path(file['filename'])
             asset_name = asset_name.stem
             break

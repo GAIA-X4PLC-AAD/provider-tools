@@ -78,15 +78,11 @@ def main():
     parser.add_argument('-out', type=str, help='output filname for reduced file.')
     args = parser.parse_args()
 
-    print(args.filename)
-    print(args.out)
-
     # Path to the XML file
     xml_file_path = Path(args.filename)
     if not xml_file_path.exists():
         print (f'json file {xml_file_path} not exists')
         exit(1)
-    print(xml_file_path)
 
     # Target JSON file
     output_json_file = Path(args.out)
@@ -94,15 +90,12 @@ def main():
     if not output_json_path.exists():
         #output_json_path.makedirs()
         output_json_path.mkdir(parents=True, exist_ok=True)
-    print(output_json_path)
 
     # read mapping table
     asset_type = xml_file_path.suffix.lstrip('.') # Get file extension without the dot
     mapping_name = f'mapping_tables/mapping_{asset_type}.json'
     script_dir = Path(__file__).parent.resolve()
     mapping_file = script_dir / mapping_name
-    print('node_mapping: ')
-    print(mapping_file.resolve())
     node_mapping = io.load_mapping_table(mapping_file)
     if not node_mapping:
         exit(1)
@@ -118,7 +111,6 @@ def main():
         if result:
             json_data.append(result)
 
-    print('here!!')
     # write to json file
     #binary = is_binary#args.binary
     io.save_json(json_data, output_json_file, True)

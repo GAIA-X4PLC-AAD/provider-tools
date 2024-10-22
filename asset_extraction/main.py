@@ -11,7 +11,6 @@ def load_configs(config_dir: Path) -> list:
     configs = []
     
     # Sort the filenames by their numeric prefix
-    #sorted_filenames = sorted(config_dir.glob('*.json'), key=lambda f: int(f.stem.split('_')[0]))
     sorted_filenames = sorted(config_dir.glob('*.json'))
 
     for filename in sorted_filenames:

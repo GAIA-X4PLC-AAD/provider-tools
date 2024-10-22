@@ -88,7 +88,6 @@ def main():
     output_json_file = Path(args.out)
     output_json_path = output_json_file.parent
     if not output_json_path.exists():
-        #output_json_path.makedirs()
         output_json_path.mkdir(parents=True, exist_ok=True)
 
     # read mapping table

@@ -2,11 +2,47 @@ from pathlib import Path
 from datetime import datetime
 
 import logging
-import os
+import pycountry
 import json
 from geopy.geocoders import Nominatim
 from pyproj import CRS, Transformer
 
+# manual assignment of local country name (Germany) to alpha-2 -> OSM only receives local name, but for alpha 2 code you need the English name.
+country_name_to_alpha2 = {
+    "Deutschland": "DE",
+    "Österreich": "AT",
+    "Schweiz": "CH",
+    "Italia": "IT",
+    "España": "ES",
+    "Portugal": "PT",
+    "Nederland": "NL",
+    "Belgique": "BE",
+    "Danmark": "DK",
+    "Sverige": "SE",
+    "Norge": "NO",
+    "Suomi": "FI",
+    "Polska": "PL",
+    "Česká republika": "CZ",
+    "Magyarország": "HU",
+    "Ελλάδα": "GR",
+    "Türkiye": "TR",
+    "United Kingdom": "GB",
+    "Ireland": "IE",
+    "United States": "US",
+    "Canada": "CA",
+    "México": "MX",
+    "Brasil": "BR",
+    "Argentina": "AR",
+    "Chile": "CL",
+    "Australia": "AU",
+    "New Zealand": "NZ",
+    "日本": "JP",
+    "中国": "CN",
+    "Россия": "RU",
+    "भारत": "IN",
+    "South Africa": "ZA"
+    # Todo, add more
+}
 
 def get_position_from_osm(data_dict, latitude, longitude):
     # custom User-Agent
@@ -17,7 +53,9 @@ def get_position_from_osm(data_dict, latitude, longitude):
     location = geolocator.reverse((latitude, longitude), exactly_one=True)
     # Extract the desired information
     address = location.raw['address']
-    data_dict['georeference:country'] = address.get('country', '')
+    country_name = address.get('country', '')
+    country_alpha2 = country_name_to_alpha2.get(country_name, "DE")
+    data_dict['georeference:country'] = country_alpha2
     data_dict['georeference:state'] = address.get('state', '')
     #data_dict['postcode'] = address.get('postcode', '')
     data_dict['georeference:region'] = address.get('county', '')

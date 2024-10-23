@@ -2,7 +2,6 @@ from pathlib import Path
 from datetime import datetime
 
 import logging
-import pycountry
 import json
 from geopy.geocoders import Nominatim
 from pyproj import CRS, Transformer
@@ -54,9 +53,8 @@ def get_position_from_osm(data_dict, latitude, longitude):
     # Extract the desired information
     address = location.raw['address']
     country_name = address.get('country', '')
-    country_alpha2 = country_name_to_alpha2.get(country_name, "DE")
-    data_dict['georeference:country'] = country_alpha2
-    data_dict['georeference:state'] = address.get('state', '')
+    data_dict['georeference:country'] = str(address.get('country_code', country_name_to_alpha2.get(country_name, "DE"))).upper()
+    data_dict['georeference:state'] = address.get('ISO3166-2-lvl4', address.get('state', ''))
     #data_dict['postcode'] = address.get('postcode', '')
     data_dict['georeference:region'] = address.get('county', '')
     data_dict['georeference:city'] = address.get('city', address.get('town', address.get('village', '')))

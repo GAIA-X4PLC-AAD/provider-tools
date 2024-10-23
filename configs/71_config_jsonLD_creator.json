@@ -11,7 +11,8 @@
 		"input" : {"" : "{path}/temp/{name}_structure.json"},
 		"output" : {"-out" : "{path}/manifest.json"},
 		"additional" : {
-			"-ontology" : "https://raw.githubusercontent.com/ASCS-eV/EVES/onboardingAsset"
+			"-ontology" : "https://raw.githubusercontent.com/ASCS-eV/EVES/onboardingAsset",
+			"-validate" : ""
 		}		
 	}
 }

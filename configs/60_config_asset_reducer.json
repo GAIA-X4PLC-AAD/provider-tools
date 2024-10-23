@@ -1,7 +1,7 @@
 {
 	"name" : "asset_reducer",
 	"environment type" : "python",
-	"data folder" : "services",
+	"data folder" : "data",
 	"asset types" :	[
 		{ "extension" : "xodr" }
 	],

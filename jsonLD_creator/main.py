@@ -202,7 +202,7 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
             if prop_node in shacl_dict:
                 node = shacl_dict[prop_node]
                 node_path_name = getValue('path', properties, False)
-                node_path_name = convert_path_to_namespace(node_path_name, True, schema_name)
+                node_path_name = convert_path_to_namespace(node_path_name, False, schema_name)
                 isList_sub = is_list_property(properties)
                 if node_path_name not in meta_data:
                     continue
@@ -229,9 +229,13 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
         if isList_prop:
             property = list()           
         else:
-            property = dict()           
+            property = dict()
             data_type = replace_namespace(prop_type, prefixes)
-            property['@type'] = data_type                            
+            if data_type == "xsd:anyURI":
+                property = dict()                
+                property['@type'] = data_type 
+            else:
+                property = str                           
         prop_path = getValue('path', properties, False)
         prop_path = replace_namespace(prop_path, prefixes)
 
@@ -241,14 +245,18 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
             if isList_prop:
                 for data_value in data_from_metadata:
                     property.append(data_value)
-            else:
+            elif type(property) == dict:
                 property['@value'] = data_from_metadata
+            else:
+                property = data_from_metadata
         elif is_required_property(properties): # is required
             data_value = check_value_type(dataTypeMap[data_type]['default'], data_type)
             if isList_prop:
                 property.append(data_value)    
-            else:
+            elif type(property) == dict:
                 property['@value'] = data_value
+            else:
+                property = data_value
         elif is_in_namespace(prop_path, schema_name): # not filled -> ignore
             logging.warning(f'{prop_path} not found!!')
             continue
@@ -258,10 +266,12 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
         # register
         if isinstance(group, list):
             logging.debug(f'{" "  * level * 3}add prop {prop_path}')
-            prop_group[prop_path.lower()] = property
+            #prop_group[prop_path.lower()] = property
+            prop_group[prop_path] = property
         else:
             logging.debug(f'{" " * level * 3}add prop {prop_path}')
-            group[prop_path.lower()] = property
+            #group[prop_path.lower()] = property
+            group[prop_path] = property
     
     if isinstance(group, list):
         group.append(prop_group)
@@ -471,9 +481,9 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
     if not conforms:
         print('####### Validation errors: #######')
         print(v_text)
-        print('')
-        print('####### Validation graph: #######')
-        print(v_graph.serialize(format='turtle'))
+        #print('')
+        #print('####### Validation graph: #######')
+        #print(v_graph.serialize(format='turtle'))
         sys.exit(400)        
 
 def validate_jsonld(jsonld_file: Path, shacle_path : Path):
@@ -489,6 +499,7 @@ def main():
     parser.add_argument('-ontology', type=str,help='githup path to ontologies')
     parser.add_argument('-out', type=str, help='output filname for json LD file.')
     parser.add_argument('-did', type=str, help='user did.')
+    parser.add_argument('-validate', action='store_true', help='validate created json LD file.')
     args = parser.parse_args()
 
     # read attribute data
@@ -528,11 +539,12 @@ def main():
     # write claims as json id to output    
     output_path = Path(args.out)
     with open(output_path, 'w') as f:
-        json.dump(json_dict, f, indent=4, default=datetime_handler)
+        json.dump(json_dict, f, indent=2, default=datetime_handler)
         logging.info(f'write json ld to {output_path}')
 
     # validate
-    validate_jsonld(output_path, Path(__file__).parent.resolve() / 'shacles')
+    if args.validate:
+        validate_jsonld(output_path, Path(__file__).parent.resolve() / 'shacles')
 
 if __name__ == '__main__':
     main()

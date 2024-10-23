@@ -14,8 +14,10 @@ from rdflib.namespace import SH, RDF
 from rdflib import Graph, URIRef
 from collections import defaultdict
 from pathlib import Path
+from pyshacl import validate
 
-#import os
+import glob
+import sys
 import json
 import logging
 import argparse
@@ -175,13 +177,11 @@ def create_group(as_list, node_path_name, node_path, schema_name, json_dict, lev
     # create group
     if as_list:
         group = list()
-        #logging.debug(f'{' ' * level * 3}add list {node_path_name}')
         logging.debug(f'{" " * level * 3}add list {node_path_name}')  
 
     else:
         group = dict()
         group['@type'] = convert_path_to_namespace(node_path, False, schema_name)
-        #logging.debug(f'{' ' * level * 3}add dict {node_path_name}')
         logging.debug(f'{" " * level * 3}add dict {node_path_name}')  
 
     if register:
@@ -447,6 +447,41 @@ def download_shacles(url_path : str, shacle_name: str, shacls):
         logging.exception(f'cannot read turtle file: {local_file_path}')
         exit(1) 
 
+def load_shacl_files(root_dir):
+    shacl_graph = Graph()
+    shacl_files = sorted(root_dir.glob('*_shacl.ttl'))
+    #shacl_files = glob.glob(f'{root_dir}/**/*_shacl.ttl', recursive=True)
+    for shacl_file in shacl_files:
+        shacl_graph.parse(shacl_file, format='turtle')
+    return shacl_graph
+
+
+def load_jsonld_file(jsonld_file : Path):
+    data_graph = Graph()
+    print(f'adding jsonld file to data graph: {jsonld_file}.')
+    with open(jsonld_file) as f:
+        data = json.load(f)
+    data_graph.parse(data=json.dumps(data), format='json-ld')
+    return data_graph
+
+
+def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
+    conforms, v_graph, v_text = validate(data_graph, shacl_graph=shacl_graph, data_graph_format='json-ld', inference='rdfs', debug=False)
+    print(f'Conforms: {conforms}')
+    if not conforms:
+        print('####### Validation errors: #######')
+        print(v_text)
+        print('')
+        print('####### Validation graph: #######')
+        print(v_graph.serialize(format='turtle'))
+        sys.exit(400)        
+
+def validate_jsonld(jsonld_file: Path, shacle_path : Path):
+    # load all jsonld files into the graph since they might reference each other
+    data_graph = load_jsonld_file(jsonld_file)
+    shacl_graph = load_shacl_files(shacle_path)
+
+    validate_jsonld_against_shacl(data_graph, shacl_graph)
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='creates a jsonLD from an attribute table of the meta data extractors')
@@ -459,6 +494,7 @@ def main():
     # read attribute data
     claim_path = Path(args.filename)
     if not claim_path.exists():
+        logging.exception(f'Could not find file {claim_path}')
         exit(1)
     with open(claim_path, 'r', encoding='utf-8') as file:
         claim_data = json.load(file)
@@ -494,6 +530,9 @@ def main():
     with open(output_path, 'w') as f:
         json.dump(json_dict, f, indent=4, default=datetime_handler)
         logging.info(f'write json ld to {output_path}')
+
+    # validate
+    validate_jsonld(output_path, Path(__file__).parent.resolve() / 'shacles')
 
 if __name__ == '__main__':
     main()

@@ -11,14 +11,12 @@ extensions = {
     'pdf': 'Document',
     'doc': 'Document',
     'geojson': 'Routing',
-    'json': 'Data',
-    'xml': 'Data',
-    'bjson' : 'Service', 
+    'bjson' : 'AssetData', 
     'zip' : 'Asset'
 }
 
 type_data = {
-    'Asset' : {
+    'AssetData' : {
         'folder' : 'data',
         'mask' : '{asset}'
     },
@@ -37,10 +35,6 @@ type_data = {
     'Metadata' : {
         'folder' : 'metadata',
         'mask' : 'domain_metadata'
-    },
-    'Service' : {
-        'folder' : 'services',
-        'mask' : '{asset}_extSearch'
     },
     'Validation' : {
         'folder' : 'validation',
@@ -70,6 +64,11 @@ def get_data_typ(file: Path)-> str:
         typ = extensions[extension]
         if typ is not None:
             return typ
+    # try with subfolder
+    sub_path = file.name if file.is_dir() else file.parent.name
+    for key, value in type_data.items():
+        if value['folder'] == sub_path:
+            return key
     return None
 
 
@@ -100,15 +99,16 @@ def register_data(data: dict, user_data: dict, path: Path, data_path: Path, role
     for filename in path.rglob("*"):
         if filename.is_dir():
             continue
-        file_data = {}
-        file_data['manifest:accessRole'] = role
-        relative_path = filename.relative_to(data_path).as_posix()
-        file_data['manifest:relativePath'] = str(relative_path)
         file = get_file(user_data, filename.name)
         if file:
             typ = file['type']
         else:
             typ = get_data_typ(filename)
+
+        file_data = {}
+        file_data['manifest:accessRole'] = 'publicUser' if typ == 'Service' else role
+        relative_path = filename.relative_to(data_path).as_posix()
+        file_data['manifest:relativePath'] = str(relative_path)        
         file_data['manifest:type'] = typ
         file_data['manifest:format'] = filename.suffix.lstrip('.')
         files.append(file_data)
@@ -173,7 +173,7 @@ def main():
     asset_name = None
     # get asset name from Data entry
     for file in user_data:
-        if file['type'] == 'Asset':
+        if file['type'] == 'AssetData':
             asset_name = Path(file['filename'])
             asset_name = asset_name.stem
             break
@@ -213,16 +213,16 @@ def main():
     data = {}
     data['shacle_type'] = 'manifest:Manifest'
     data_group = {}
-    data['manifest:links'] = data_group
+    data['manifest:data'] = data_group
     for sub_folder in data_path.iterdir():
         relative_path = str(sub_folder.relative_to(data_path))
         if relative_path == 'data':
-            type = 'manifest:data'
+            type = 'manifest:assetData'
             role = 'owner'
         elif relative_path == 'temp':
             continue
         else:
-            type = 'manifest:media'
+            type = 'manifest:contentData'
             role = 'publicUser'
         register_data(data_group, user_data, sub_folder, data_path, role, type)
     # add asset zip

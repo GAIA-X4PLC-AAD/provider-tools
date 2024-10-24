@@ -125,7 +125,7 @@ def extract(file: Path, output_file: Path) -> bool:
         return False     
 
     with open(output_file, 'w') as f:
-        json.dump(meta_data, f, indent=4, default=datetime_handler)
+        json.dump(meta_data, f, indent=4, ensure_ascii=False, default=datetime_handler)
         logging.info(f'write json to {output_file}')
    
     return True

@@ -98,11 +98,12 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     geo_reference = None
     if 'header' in data and 'geoReference' in data['header']:
         geo_reference = data['header']['geoReference']
-    geodetic_ref_system_dict = dict()
-    lat = default_value
-    lon = default_value
+    
+    #lat = 0.0
+    #lon = 0.0
 
     if geo_reference:
+        geodetic_ref_system_dict = dict()
         geo_data = geo_reference.split(' ')
 
         # go through the string and parse data if available
@@ -117,21 +118,16 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
                 local_data_dict['geodetic_datum'] = information.split("+datum=")[1]
             elif information.startswith("+units="):
                 local_data_dict['geodetic_unit'] = information.split("+units=")[1]
-            elif information.startswith("+lat_0="):
-                lat = information.split("+lat_0=")[1]
-            elif information.startswith("+lon_0="):
-                lon = information.split("+lon_0=")[1]
-
-        # if lat and lon was found create string for origin
-        if lat != default_value and lon != default_value:
-            coordinate_2D_dict = dict()
-            coordinate_2D_dict['georeference:x'] = str(lon)
-            coordinate_2D_dict['georeference:y'] = str(lat)
-            geodetic_ref_system_dict['georeference:origin'] = coordinate_2D_dict
+            #elif information.startswith("+lat_0="):
+            #    lat = information.split("+lat_0=")[1]
+            #elif information.startswith("+lon_0="):
+            #    lon = information.split("+lon_0=")[1]
 
         epsg_code = proj4_to_epsg(geo_reference)
         if epsg_code:
             geodetic_ref_system_dict['georeference:coordinateSystem'] = epsg_code
+        else:
+            geodetic_ref_system_dict['georeference:coordinateSystemName'] = local_data_dict['projection_type']
 
     ###################################################################################################################
     # calculated meta data
@@ -182,8 +178,8 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         bounding_dict['xMax'] = float(root.find('.//header').attrib['east']) if check_data(root, ".//header", "east") else unknown_unit
         bounding_dict['yMin'] = float(root.find('.//header').attrib['south']) if check_data(root, ".//header", "south") else unknown_unit
         bounding_dict['yMax'] = float(root.find('.//header').attrib['north']) if check_data(root, ".//header", "north") else unknown_unit    
-        bounding_dict['xMin'], bounding_dict['yMin'] = convert_to_LatLon(bounding_dict['xMin'], bounding_dict['yMin'], geo_reference)
-        bounding_dict['xMax'], bounding_dict['yMax'] = convert_to_LatLon(bounding_dict['xMax'], bounding_dict['yMax'], geo_reference)
+        bounding_dict['yMin'], bounding_dict['xMin'] = convert_to_LatLon(bounding_dict['xMin'], bounding_dict['yMin'], geo_reference)
+        bounding_dict['yMax'], bounding_dict['xMax'] = convert_to_LatLon(bounding_dict['xMax'], bounding_dict['yMax'], geo_reference)
         bounding_data_dict = dict()
         bounding_data_dict['georeference:xMin'] = bounding_dict['xMin']
         bounding_data_dict['georeference:yMin'] = bounding_dict['yMin']
@@ -191,10 +187,22 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         bounding_data_dict['georeference:yMax'] = bounding_dict['yMax']
         projection_location_dict['georeference:boundingbox'] = bounding_data_dict
 
+        # get 0,0 point in unit and convert to lat lon
+        lat, lon = convert_to_LatLon(0.0, 0.0, geo_reference)
+        origin_dict = dict()
+        origin_dict['georeference:lat'] = str(lat)
+        origin_dict['georeference:lon'] = str(lon)
+        geodetic_ref_system_dict['georeference:origin'] = origin_dict
+
         # get country, state, town from OSM
-        center_x = (bounding_dict['xMin'] + bounding_dict['xMax']) * 0.5
-        center_y = (bounding_dict['yMin'] + bounding_dict['yMax']) * 0.5
-        get_position_from_osm(projection_location_dict, center_x, center_y)
+        center_lon = (bounding_dict['xMin'] + bounding_dict['xMax']) * 0.5
+        center_lat = (bounding_dict['yMin'] + bounding_dict['yMax']) * 0.5
+        get_position_from_osm(projection_location_dict, center_lat, center_lon)
+        viewpoint_dict = dict()
+        viewpoint_dict['georeference:lat'] = str(center_lat)
+        viewpoint_dict['georeference:lon'] = str(center_lon)
+        geodetic_ref_system_dict['georeference:viewpoint'] = viewpoint_dict  
+        georeference_dict['georeference:geodeticreferencesystem'] = geodetic_ref_system_dict
 
     ###################################################################################################################
     # unfinished meta data

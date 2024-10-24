@@ -18,9 +18,9 @@ logging.getLogger(__name__).setLevel(logging.WARNING)
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='extractor meta data from a given file.')
-    parser.add_argument('-out', '--output', type=str, default='claims/', help='filename to exported claim.')
-    parser.add_argument('-u', '--user_input', action='store_true', help='Activates the user query via dialogues for non-extractable attributes.')
     parser.add_argument('filename', help='filename to extract metadata')
+    parser.add_argument('-out', '--output', type=str, help='filename to exported json dict.')
+    parser.add_argument('-u', '--user_input', action='store_true', help='Activates the user query via dialogues for non-extractable attributes.')    
 
     # 1. get and check arguments
     args = parser.parse_args()

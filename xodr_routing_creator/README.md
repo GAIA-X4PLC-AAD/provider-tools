@@ -6,9 +6,9 @@ the georeferenced vector format is required for the web display of the asset in 
 
 # How to run
 - main.py with arguments
-    - -xodr : filename of OpenDRIVE file
-    - -output : filename of exported file
-	- -format : output format for geo file - choose 'kml', 'geojson'
+    - [filename] : filename of OpenDRIVE file
+    - -out : filename of exported file - use extension for format selection ('kml', 'geojson')
+	- -box : filename for boundingbox geo file - use extension for format selection ('kml', 'geojson')
 
 # Install
     To install the required libraries run: `pip install -r requirements.txt` or `python -m pip install -r requirements.txt`    

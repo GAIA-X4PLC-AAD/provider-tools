@@ -1,13 +1,14 @@
 # Description
-reads config files for various tools and starts them depending on the input asset type.
+Creates an asset archive. Reads configuration files for various tools and starts them depending on the type of asset entered.
 
 # Motivation
-building a pipeline to automatically call tools from asset files (xodr, xosc, ..)
+Creation of a pipeline to automatically generate an asset.zip from asset files (xodr, xosc, ...).
 
 # How to run
 - main.py with arguments
-    - -asset : filepath for asset file
-    - -config_path : config folder
+	- [filenname] : asset filename
+	- -config : config path for sub tools
+    - -out : output path for asset archive
 
 # Install
     To install the required libraries run: `pip install -r requirements.txt` or `python -m pip install -r requirements.txt`    

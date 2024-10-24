@@ -7,4 +7,9 @@ The metadata with all its settings and structures can be better managed, edited 
 
 # How to run
 - main.py with arguments
-    - -in-file : Path to Excel Table (default Metadata.xlsx)
+    - -table : Path to Excel Table (default Metadata.xlsx)
+	- -out : Path to exported ontology and shacle files (default ontologies/)
+	- -url : URL entry for the ontologies (default https://github.com/GAIA-X4PLC-AAD/map-and-scenario-data/tools/ontologie_creator/ontologies/')
+
+# Install
+To install the required libraries run: `pip install -r requirements.txt` or `python -m pip install -r requirements.txt`    

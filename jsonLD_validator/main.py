@@ -1,6 +1,7 @@
 from pathlib import Path
 from pyshacl import validate
-from rdflib import Graph
+from rdflib.namespace import RDF, SH
+from rdflib import Graph, Literal
 
 import sys
 import json
@@ -26,7 +27,14 @@ def load_jsonld_file(jsonld_file : Path):
 
 
 def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
-    conforms, v_graph, v_text = validate(data_graph, shacl_graph=shacl_graph, data_graph_format='json-ld', inference='rdfs', debug=False)
+    conforms, v_graph, v_text = validate(data_graph, shacl_graph=shacl_graph, 
+                                         #data_graph_format='json-ld', 
+                                         inference='rdfs', 
+                                         abort_on_first=False,
+                                         advanced=True,  # Erweitertes Validierungsverhalten
+                                         allow_warnings=True  # Gibt Warnungen statt Fehler, falls nötig
+                                         #debug=False
+                                         )
     print(f'Conforms: {conforms}')
     if not conforms:
         print('####### Validation errors: #######')
@@ -40,12 +48,18 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='validate jsonLD against shacls')
     parser.add_argument('filename', type=str,help='json LD filename')
+    parser.add_argument('--closed', action="store_true", help='set closed = true in all NodeShapes, to also check the naming of properties')
     args = parser.parse_args()
 
     # load json and shacls
     json_LD_file = Path(args.filename)
     data_graph = load_jsonld_file(json_LD_file)
     shacl_graph = load_shacl_files(Path(__file__).parent.resolve() / 'shacles')
+
+    # find all closed tags and set to True
+    if args.closed:
+        for s, p, o in shacl_graph.triples((None, SH.closed, Literal(False))):
+            shacl_graph.set((s, SH.closed, Literal(True)))
 
     # validate
     validate_jsonld_against_shacl(data_graph, shacl_graph)

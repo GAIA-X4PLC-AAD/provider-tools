@@ -83,8 +83,6 @@ def calculate_bounding_box(x, y, hdg, length):
 def getRoadBounding(road):
     geometries = road.findall(".//geometry")
     boxRoad = Box2D()
-    if int(road.attrib['id']) == 1016400:
-        test = 0
     for geometry in geometries:
         x = float(geometry.attrib['x'])
         y = float(geometry.attrib['y'])
@@ -108,13 +106,53 @@ def reduceXODR(box, file_in, file_out):
         print(f'cant load {file_in.stem}: {err.msg}')
         return False
     
+    junctions = {}
     roads = root.findall(".//road")
     for road in roads:
-        boxRoad = getRoadBounding(road)
-        if boxRoad.intersection(box) == False:
-            print(f"remove road {road.attrib['id']}")
-            root.remove(road)
-        # TODO remove roads also from junctions
+        junctionID = road.attrib["junction"]
+        if junctionID == "-1": # only non junction road
+            # get links
+            linkIDs = []
+            link = road.find("link")
+            if link is not None:
+                for child in link:
+                    linkIDs.append(child.attrib["elementId"])
+            
+            # check inside / outside
+            boxRoad = getRoadBounding(road)
+            container = "inside"
+            if boxRoad.intersection(box) == False:
+                container = "outside"
+            
+            # register
+            for id in linkIDs:
+                if id not in junctions:
+                    junctions[id] = {"inside": [], "outside": [], "internal": []}
+                junctions[id][container].append(road)
+        else: # register internal road
+            if junctionID not in junctions:
+                junctions[junctionID] = {"inside": [], "outside": [], "internal": []}
+            junctions[junctionID]["internal"].append(road)
+
+    # loop junctions
+    for key, value in junctions.items():
+        if not value["inside"]: # all incomming road of this junctions are outside -> remove junction            
+            # get junction
+            for junction in root.findall("junction"):
+                if junction.get("id") == key:
+                    root.remove(junction) # remove junction
+                    for internal_road in value["internal"]: # remove internal roads
+                        root.remove(internal_road)
+                    for road in value["outside"]:
+                        link = road.find("link")
+                        if link is not None:
+                            for child in link:
+                                if child.attrib["elementId"] == key:
+                                    link.remove(child)
+                                    break
+                            
+                            if not len(link): # is empty
+                                root.remove(road)
 
     tree.write(file_out)
 

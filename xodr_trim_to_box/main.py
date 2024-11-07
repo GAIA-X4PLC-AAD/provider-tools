@@ -10,19 +10,19 @@ import sys
 # helper class for 2d bounding box
 class Box2D:
     xMin : float
-    xMax : float
     yMin : float
+    xMax : float    
     yMax : float
 
     def __init__(self, 
                  xMin: float = sys.float_info.max, 
-                 xMax: float = -sys.float_info.max, 
                  yMin: float = sys.float_info.max, 
+                 xMax: float = -sys.float_info.max,                  
                  yMax: float = -sys.float_info.max) -> None:
         super().__init__()
         self.xMin = xMin
-        self.xMax = xMax
         self.yMin = yMin
+        self.xMax = xMax        
         self.yMax = yMax
 
     def intersection(self, box2):
@@ -64,15 +64,10 @@ class Box2D:
 
 # calc end position from start pos, heading and length value
 def calculate_end_position(start_x, start_y, heading, length):
-    # Berechne die Änderung in der x- und y-Richtung
-    delta_x = length * math.cos(heading)
-    delta_y = length * math.sin(heading)
+    end_x = start_x + math.cos(heading) * length
+    end_y = start_y + math.sin(heading) * length
 
-    # Berechne die Endposition
-    x = start_x + delta_x
-    y = start_y + delta_y
-
-    return x, y
+    return end_x, end_y
 
 
 def calculate_bounding_box(x, y, hdg, length):
@@ -88,6 +83,8 @@ def calculate_bounding_box(x, y, hdg, length):
 def getRoadBounding(road):
     geometries = road.findall(".//geometry")
     boxRoad = Box2D()
+    if int(road.attrib['id']) == 1016400:
+        test = 0
     for geometry in geometries:
         x = float(geometry.attrib['x'])
         y = float(geometry.attrib['y'])
@@ -115,8 +112,9 @@ def reduceXODR(box, file_in, file_out):
     for road in roads:
         boxRoad = getRoadBounding(road)
         if boxRoad.intersection(box) == False:
+            print(f"remove road {road.attrib['id']}")
             root.remove(road)
-        # TODO remove roads also vom junctions
+        # TODO remove roads also from junctions
 
     tree.write(file_out)
 
@@ -124,7 +122,7 @@ def reduceXODR(box, file_in, file_out):
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='removes the streets and intersections that are not in the specified bounding box and writes them out with *_reduce.xodr.')   
     parser.add_argument('filename', help='OpenDRIVE filename')
-    parser.add_argument("--bbox", type=int, nargs=4, required=True,
+    parser.add_argument("--bbox", type=float, nargs=4, required=True,
                         metavar=("x_min", "y_min", "x_max", "y_max"),
                         help="bounding box as 4 values: x_min, y_min, x_max, y_max")
     args = parser.parse_args()

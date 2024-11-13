@@ -40,13 +40,10 @@ def main():
     script_call.append('vcs-odr-converter-1.0.0.jar')
     script_call.append(new_temp_file.as_posix())
     script_call.append(filename_out.parent.as_posix())
-    #script_call.append(new_temp_file.as_posix())
-    #script_call.append(filename_out.parent.as_posix())
     print(script_call)
     # run
     try:    
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        #result = subprocess.run(["java", "-jar", 'vcs-odr-converter-1.0.0.jar', new_temp_file.as_posix(), filename_out.parent.as_posix()], check=True, capture_output=True, text=True)
         print(f"end command succeeded with output:")
         print(result.stdout)  # print default output from sub process
         print(result.stderr)  # print logging output from sub process

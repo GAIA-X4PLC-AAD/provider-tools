@@ -6,7 +6,11 @@ from rdflib import Graph, Literal
 import sys
 import json
 import argparse
+import requests
+import logging
 
+#gaiax_url = 'https://github.com/GAIA-X4PLC-AAD/ontology-management-base/tree/main/'
+is_gaiax_url = 'GAIA-X4PLC-AAD/ontology-management-base'
 
 def load_shacl_files(root_dir):
     shacl_graph = Graph()
@@ -39,11 +43,32 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
     if not conforms:
         print('####### Validation errors: #######')
         print(v_text)
-        #print('')
-        #print('####### Validation graph: #######')
-        #print(v_graph.serialize(format='turtle'))
         sys.exit(400)        
 
+def get_shacl_urls_from_data(data_graph: Graph ):
+    # get gaia x prefixes
+    prefixes = {prefix: str(namespace) for prefix, namespace in data_graph.namespace_manager.namespaces() if is_gaiax_url in str(namespace)}
+    return prefixes
+
+def download_shacle(url_path : str, shacle_name: str, folder : Path) -> str:
+    filename = f'{shacle_name}_shacl.ttl'
+    local_file_path = f'{folder}/{filename}'
+
+    if not Path(local_file_path).exists():
+        # replace github from github
+        new_url_path = 'https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/'
+        new_url_path = url_path.replace('https://github.com/', 'https://raw.githubusercontent.com/')
+        new_url_path = new_url_path.replace('/blob', '')
+        new_url_path = new_url_path.replace('/tree', '')
+        url = f'{new_url_path}{filename}'
+        response = requests.get(url)
+        if not response:
+            logging.error(f'No shacl files found in url: {url}')
+            exit(1)            
+        with open(local_file_path, 'wb') as file:
+            file.write(response.content) 
+
+    return local_file_path
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='validate jsonLD against shacls')
@@ -51,10 +76,19 @@ def main():
     parser.add_argument('--closed', action="store_true", help='set closed = true in all NodeShapes, to also check the naming of properties')
     args = parser.parse_args()
 
-    # load json and shacls
+    # load json
     json_LD_file = Path(args.filename)
     data_graph = load_jsonld_file(json_LD_file)
-    shacl_graph = load_shacl_files(Path(__file__).parent.resolve() / 'shacles')
+
+    # load shacls
+    ontology_path = ""
+    shacl_folder = Path(__file__).parent.resolve() / 'shacles'
+    if not shacl_folder.exists():
+        shacl_folder.mkdir()        
+    prefixes = get_shacl_urls_from_data(data_graph)
+    for key, value in prefixes.items():
+        download_shacle(value, key, shacl_folder)
+    shacl_graph = load_shacl_files(shacl_folder)
 
     # find all closed tags and set to True
     if args.closed:

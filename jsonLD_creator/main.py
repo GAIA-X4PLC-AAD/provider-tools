@@ -419,9 +419,7 @@ def convert_graph_to_dict(graph):
 
     return graph_dict
 
-
-def download_shacles(url_path : str, shacle_name: str, shacls):
-
+def download_shacle(url_path : str, shacle_name: str) -> str:
     filename = f'{shacle_name}_shacl.ttl'
     subfolder = 'shacles'    
     local_file_path = f'{subfolder}/{filename}'
@@ -437,18 +435,24 @@ def download_shacles(url_path : str, shacle_name: str, shacls):
         if not Path(subfolder).exists():
             Path(subfolder).mkdir()
         with open(local_file_path, 'wb') as file:
-            file.write(response.content)
+            file.write(response.content) 
+
+    return local_file_path
+
+
+def handle_shacles(url_path : str, shacle_name: str, shacls):
+
+    local_file_path = download_shacle(url_path, shacle_name)
 
     try:
         graph = Graph()
         graph.parse(local_file_path, format='turtle')
+        
         graph_data = {}
         graph_data['graph'] = graph
-        graph_data['dict'] = convert_graph_to_dict(graph)
-        # debug TODO
-        #with open('test.json', 'w') as f:
-        #    json.dump(graph_data['dict'], f, indent=4, default=datetime_handler)
+        graph_data['dict'] = convert_graph_to_dict(graph)        
         graph_data['prefixes'] = getPrefixes(graph)
+
         shacls[shacle_name] = graph_data
     except:
         logging.exception(f'cannot read turtle file: {local_file_path}')
@@ -475,18 +479,18 @@ def main():
     ontology_path = args.ontology + '/'
     shacl_definitions = {}
     url_path = f'{ontology_path}{shacle_namespace}/'
-    download_shacles(url_path, shacle_namespace, shacl_definitions)
+    handle_shacles(url_path, shacle_namespace, shacl_definitions)
 
     # get gaia x prefixes
     gaiax_url = 'https://github.com/GAIA-X4PLC-AAD/ontology-management-base/tree/main/'
     shacl_data = shacl_definitions[shacle_namespace]
-    prefixes = {prefix: str(namespace) for prefix, namespace in shacl_data['graph'].namespace_manager.namespaces() 
-        if str(namespace).startswith(gaiax_url)}
+    prefixes = {prefix: str(namespace) for prefix, namespace in shacl_data['graph'].namespace_manager.namespaces() if str(namespace).startswith(gaiax_url)}
+
     # and download additional shacles
     for key, value in prefixes.items():
         if key not in shacl_definitions:
             new_url_path = value.replace(gaiax_url, ontology_path)
-            download_shacles(new_url_path, key, shacl_definitions)
+            handle_shacles(new_url_path, key, shacl_definitions)
     
     # fill data in shacle structure
     user_did = args.did

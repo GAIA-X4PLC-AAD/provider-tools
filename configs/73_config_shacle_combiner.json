@@ -1,0 +1,14 @@
+{
+	"name" : "shacl combiner",
+	"environment type" : "python",
+	"data folder" : "",
+	"asset types" :	[
+		{ "extension" : "xodr" }, 
+		{ "extension" : "xosc" }
+	],
+	"params" : 	{
+		"call" : "shacl_combiner/main.py",
+		"input" : {"" : "{path}/manifest.json"},
+        "output" : {"--out" : "{path}"}
+	}
+}

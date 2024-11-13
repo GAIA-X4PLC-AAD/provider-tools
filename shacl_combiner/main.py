@@ -1,9 +1,7 @@
 from pathlib import Path
-from pyshacl import validate
-from rdflib.namespace import RDF, SH
-from rdflib import Graph, Literal
+from rdflib import Graph
 
-import sys
+import shutil
 import json
 import argparse
 import requests
@@ -27,22 +25,6 @@ def load_jsonld_file(jsonld_file : Path):
     data_graph.parse(data=json.dumps(data), format='json-ld')
     return data_graph
 
-
-def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
-    conforms, v_graph, v_text = validate(data_graph, shacl_graph=shacl_graph, 
-                                         #data_graph_format='json-ld', 
-                                         inference='rdfs', 
-                                         abort_on_first=False,
-                                         advanced=True,  # Erweitertes Validierungsverhalten
-                                         allow_warnings=True  # Gibt Warnungen statt Fehler, falls nötig
-                                         #debug=False
-                                         )
-    print(f'Conforms: {conforms}')
-    if not conforms:
-        print('####### Validation errors: #######')
-        print(v_text)
-        sys.exit(400)        
-
 def get_shacl_urls_from_data(data_graph: Graph ):
     # get gaia x prefixes
     prefixes = {prefix: str(namespace) for prefix, namespace in data_graph.namespace_manager.namespaces() if gaiax_url_part in str(namespace)}
@@ -54,6 +36,7 @@ def download_shacle(url_path : str, shacle_name: str, folder : Path) -> str:
 
     if not Path(local_file_path).exists():
         # replace github link ro raw data link
+        new_url_path = 'https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/'
         new_url_path = url_path.replace('https://github.com/', 'https://raw.githubusercontent.com/')
         new_url_path = new_url_path.replace('/blob', '')
         new_url_path = new_url_path.replace('/tree', '')
@@ -68,9 +51,9 @@ def download_shacle(url_path : str, shacle_name: str, folder : Path) -> str:
     return local_file_path
 
 def main():
-    parser = argparse.ArgumentParser(prog='main.py', description='validate jsonLD against shacls')
+    parser = argparse.ArgumentParser(prog='main.py', description='combine shalce file for jsonLD to one file')
     parser.add_argument('filename', type=str,help='json LD filename')
-    parser.add_argument('--closed', action="store_true", help='set closed = true in all NodeShapes, to also check the naming of properties')
+    parser.add_argument('--out', type=str, help='output path for combined shacle file')
     args = parser.parse_args()
 
     # load json
@@ -79,20 +62,21 @@ def main():
 
     # load shacls
     shacl_folder = Path(__file__).parent.resolve() / 'shacles'
-    if not shacl_folder.exists():
-        shacl_folder.mkdir()        
+    if shacl_folder.exists():
+        shutil.rmtree(shacl_folder)
+    shacl_folder.mkdir()        
+
     prefixes = get_shacl_urls_from_data(data_graph)
     for key, value in prefixes.items():
         download_shacle(value, key, shacl_folder)
     shacl_graph = load_shacl_files(shacl_folder)
 
-    # find all closed tags and set to True
-    if args.closed:
-        for s, p, o in shacl_graph.triples((None, SH.closed, Literal(False))):
-            shacl_graph.set((s, SH.closed, Literal(True)))
-
-    # validate
-    validate_jsonld_against_shacl(data_graph, shacl_graph)
+    output_path = Path(args.out)
+    file = output_path / json_LD_file.with_suffix('.ttl')
+    with open(file, 'w') as f:
+        f.write(shacl_graph.serialize(format='turtle'))
+        f.close()
+        logging.info(f'write {file}')
 
 if __name__ == '__main__':
     main()

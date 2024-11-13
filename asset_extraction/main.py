@@ -58,6 +58,10 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
     # setup script params
     script_call = []
     script_call.append(script_config['environment type'])
+
+    # disables frozen standard modules so that Python loads them from the hard disk. 
+    # This can be useful if you are working on the Python interpreter itself or testing changes to the standard modules 
+    # and do not want to use a frozen version.
     if script_config['environment type'] == "python":
         script_call.append('-X')
         script_call.append('frozen_modules=off')

@@ -1,0 +1,15 @@
+{
+	"name" : "xodr_to_geojson_caller",
+	"environment type" : "python",
+	"data folder" : "visualization",
+	"asset types" :	[
+		{ "extension" : "xodr" }
+	],
+	"params" : 	{
+		"call" : "xodr_to_geojson_caller/main.py",
+		"output" : {"-out" : "{path}/{sub_path}/detailRoadNetwork.geojson"},
+        "additional" : {
+			"-path" : "{path}"
+		}	
+	}
+}

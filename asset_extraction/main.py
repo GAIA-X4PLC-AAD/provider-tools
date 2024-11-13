@@ -57,9 +57,10 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
 
     # setup script params
     script_call = []
-    script_call.append(script_config['environment type'])    
-    script_call.append('-X')
-    script_call.append('frozen_modules=off')
+    script_call.append(script_config['environment type'])
+    if script_config['environment type'] == "python":
+        script_call.append('-X')
+        script_call.append('frozen_modules=off')
     script_call.append(script_path)
 
     # input

@@ -43,6 +43,23 @@ country_name_to_alpha2 = {
     # Todo, add more
 }
 
+def replace_german_umlauts(text):
+    # Replace German umlauts with non-umlaut equivalents
+    replacements = {
+        "ä": "ae",
+        "ö": "oe",
+        "ü": "ue",
+        "Ä": "Ae",
+        "Ö": "Oe",
+        "Ü": "Ue",
+        "ß": "ss"
+    }
+    
+    for umlaut, replacement in replacements.items():
+        text = text.replace(umlaut, replacement)
+    
+    return text
+
 def get_position_from_osm(data_dict, latitude, longitude):
     # custom User-Agent
     custom_user_agent = "GaiaX_ODR_Extractor/1.0"
@@ -53,11 +70,11 @@ def get_position_from_osm(data_dict, latitude, longitude):
     # Extract the desired information
     address = location.raw['address']
     country_name = address.get('country', '')
-    data_dict['georeference:country'] = str(address.get('country_code', country_name_to_alpha2.get(country_name, "DE"))).upper()
+    data_dict['georeference:country'] = replace_german_umlauts(str(address.get('country_code', country_name_to_alpha2.get(country_name, "DE"))).upper())
     data_dict['georeference:state'] = address.get('ISO3166-2-lvl4', address.get('state', ''))
     #data_dict['postcode'] = address.get('postcode', '')
-    data_dict['georeference:region'] = address.get('county', '')
-    data_dict['georeference:city'] = address.get('city', address.get('town', address.get('village', '')))
+    data_dict['georeference:region'] = replace_german_umlauts(address.get('county', ''))
+    data_dict['georeference:city'] = replace_german_umlauts(address.get('city', address.get('town', address.get('village', ''))))
 
 
 def proj4_to_epsg(proj4_string):

@@ -210,10 +210,10 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     #meta_data_dict['range_of_modeling'] = 0.0 #"Wie ermittelt man das?"
     #meta_data_dict['general:recordingTime'] = meta_data_dict['vendor_date']#.strftime("%Y-%m-%d %H:%M:%S")
     # TODO get from traffic rule
-    content_dict['hdmap:trafficDirection'] = "right TODO"
-
-
-    #data = {}
+    #content_dict['hdmap:trafficDirection'] = ""
+    #content_dict['hdmap:levelOfDetail'] = ""
+    #projection_location_dict['georeference:relationOrArea'] = ""
+    #projection_location_dict['georeference:relationOrArea'] = ""
     
     
     meta_data_dict = dict()

@@ -10,6 +10,7 @@ Automatic process to generate a jsonLD from asset information.
     - -ontology : githup path to ontologies
     - -out : output filname for json LD file
 	- -did : user did
+    - -removeShacl : remove the downloaded folder shacl first
 
 # Install
     To install the required libraries run: `pip install -r requirements.txt` or `python -m pip install -r requirements.txt`    

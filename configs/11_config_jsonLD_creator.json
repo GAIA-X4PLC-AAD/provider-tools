@@ -11,7 +11,7 @@
 		"input" : {"" : "{path}/temp/{name}_extractor.json"},
 		"output" : {"-out" : "{path}/{sub_path}/domainMetadata.json"},
 		"additional" : {
-			"-ontology" : "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main"
+			"-ontology" : "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main","-removeShacl" : ""            
 		}		
 	}
 }

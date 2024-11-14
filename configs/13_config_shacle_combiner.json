@@ -9,6 +9,6 @@
 	"params" : 	{
 		"call" : "shacl_combiner/main.py",
 		"input" : {"" : "{path}/{sub_path}/domainMetadata.json"},
-		"output" : {"--out" : "{path}/{sub_path}"}
+		"output" : {"-out" : "{path}/{sub_path}"}
 	}
 }

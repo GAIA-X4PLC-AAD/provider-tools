@@ -70,7 +70,7 @@ def download_shacle(url_path : str, shacle_name: str, folder : Path) -> str:
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='validate jsonLD against shacls')
     parser.add_argument('filename', type=str,help='json LD filename')
-    parser.add_argument('--closed', action="store_true", help='set closed = true in all NodeShapes, to also check the naming of properties')
+    parser.add_argument('-closed', action="store_true", help='set closed = true in all NodeShapes, to also check the naming of properties')
     args = parser.parse_args()
 
     # load json

@@ -15,6 +15,7 @@ from rdflib import Graph, URIRef
 from collections import defaultdict
 from pathlib import Path
 
+import shutil
 import json
 import logging
 import argparse
@@ -236,6 +237,8 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
         prop_path = getValue('path', properties, False)
         prop_path = replace_namespace(prop_path, prefixes)
 
+        if prop_path == 'hdmap:levelOfDetail':
+            test = 0
         # set value
         data_from_metadata = get_data_from_metadata(prop_path, meta_data)
         if data_from_metadata is not None: # has data
@@ -255,7 +258,7 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
             else:
                 property = data_value
         elif is_in_namespace(prop_path, schema_name): # not filled -> ignore
-            logging.warning(f'{prop_path} not found!!')
+            #logging.warning(f'{prop_path} not found!!')
             continue
         else:
             continue
@@ -263,11 +266,9 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
         # register
         if isinstance(group, list):
             logging.debug(f'{" "  * level * 3}add prop {prop_path}')
-            #prop_group[prop_path.lower()] = property
             prop_group[prop_path] = property
         else:
             logging.debug(f'{" " * level * 3}add prop {prop_path}')
-            #group[prop_path.lower()] = property
             group[prop_path] = property
     
     if isinstance(group, list):
@@ -464,6 +465,7 @@ def main():
     parser.add_argument('-ontology', type=str,help='githup path to ontologies')
     parser.add_argument('-out', type=str, help='output filname for json LD file.')
     parser.add_argument('-did', type=str, help='user did.')
+    parser.add_argument('-removeShacl', action="store_true", help='remove the downloaded folder shacl first')
     args = parser.parse_args()
 
     # read attribute data
@@ -475,6 +477,10 @@ def main():
         claim_data = json.load(file)
 
     # download shacle file    
+    if args.removeShacl:
+        shacl_folder = Path('shacles')
+        if shacl_folder.exists():
+            shutil.rmtree(shacl_folder)
     shacle_namespace, shacle_name = get_namespace(claim_data['shacle_type'])
     ontology_path = args.ontology + '/'
     shacl_definitions = {}

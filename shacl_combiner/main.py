@@ -51,7 +51,7 @@ def download_shacle(url_path : str, shacle_name: str, folder : Path) -> Path:
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='combine shalce file for jsonLD to one file')
     parser.add_argument('filename', type=str,help='json LD filename')
-    parser.add_argument('--out', type=str, help='output path for combined shacle file')
+    parser.add_argument('-out', type=str, help='output path for combined shacle file')
     args = parser.parse_args()
 
     # load json

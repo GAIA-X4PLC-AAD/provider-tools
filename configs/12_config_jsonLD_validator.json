@@ -1,5 +1,5 @@
 {
-	"name" : "shacl combiner",
+	"name" : "jsonLD validator",
 	"environment type" : "python",
 	"data folder" : "",
 	"asset types" :	[
@@ -7,8 +7,8 @@
 		{ "extension" : "xosc" }
 	],
 	"params" : 	{
-		"call" : "shacl_combiner/main.py",
+		"call" : "jsonLD_validator/main.py",
 		"input" : {"" : "{path}/manifest.json"},
-        "output" : {"-out" : "{path}"}
+        "additional" : {"-closed" : ""}
 	}
 }

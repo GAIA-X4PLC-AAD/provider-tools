@@ -11,7 +11,7 @@
 
 from datetime import datetime
 from rdflib.namespace import SH, RDF
-from rdflib import Graph, URIRef
+from rdflib import Graph, URIRef, Namespace
 from collections import defaultdict
 from pathlib import Path
 
@@ -223,6 +223,7 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
             continue
 
         # create property
+        data_type = None
         isList_prop = is_list_property(properties)
         if isList_prop:
             property = list()           
@@ -230,14 +231,11 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
             property = dict()
             data_type = replace_namespace(prop_type, prefixes)
             if data_type == "xsd:anyURI":
-                property = dict()                
-                property['@type'] = data_type 
-            else:
-                property = str                           
+                property = dict()                                         
         prop_path = getValue('path', properties, False)
         prop_path = replace_namespace(prop_path, prefixes)
 
-        if prop_path == 'hdmap:levelOfDetail':
+        if prop_path == 'hdmap:formatType':
             test = 0
         # set value
         data_from_metadata = get_data_from_metadata(prop_path, meta_data)
@@ -262,6 +260,9 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
             continue
         else:
             continue
+
+        if data_type:# and "xsd:string" not in data_type:
+            property['@type'] = data_type
         
         # register
         if isinstance(group, list):
@@ -382,6 +383,8 @@ def getPrefixes(shacl_graph):
             if uriStr in used_namespaces:
                 prefix_str = get_prefix_for_uri(namespace, shacl_graph)
                 prefixes[prefix_str] = namespace
+        # add gx prefix
+        prefixes["gx"] = Namespace("https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#")              
         return prefixes
 
 def fill_claim_data(schema_namespace, schema_name, shacls, meta_data, user_did: str):

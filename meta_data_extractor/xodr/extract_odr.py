@@ -76,7 +76,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
 
     # search for revMajor and revMinor and create the format_version string
     format_dict['hdmap:version'] = str(data['header']['revMajor']) + '.' + str(data['header']['revMinor']) if check_data(root, ".//header", "revMajor", "revMinor") else default_value
-    format_dict['hdmap:formatType'] = 'OpenDRIVE'
+    format_dict['hdmap:formatType'] = 'ASAM OpenDRIVE'
 
     # read xml and create a list with all lengths
     list_of_lengths = [float(road.attrib['length']) for road in root.findall('.//road')] if check_data(root,".//road","length") else default_value
@@ -404,7 +404,7 @@ def get_description() -> str:
 
 
 def get_schema_name() -> str:
-    return 'HDMap'
+    return 'HdMap'
 
 def get_namespace() -> str:
     return 'hdmap'

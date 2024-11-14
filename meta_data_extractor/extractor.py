@@ -103,7 +103,6 @@ def extract(file: Path, output_file: Path) -> bool:
     
     # check folder with extension
     extension = file.suffix.lstrip('.')
-    logging.info(extension)
     format_path = Path(__file__).parent / f'{extension}'
     if not format_path.exists() or not format_path.is_dir():
         logging.error(f'Provided format path does not exist or is not a file: {format_path.absolute()}')

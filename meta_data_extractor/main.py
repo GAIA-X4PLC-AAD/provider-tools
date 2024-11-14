@@ -1,5 +1,3 @@
-#!/bin/python3
-
 if __name__ == '__main__':
     from extractor import extract
 else:
@@ -9,11 +7,7 @@ from pathlib import Path
 import argparse
 import logging
 
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s.%(msecs)03d [%(levelname)5s-%(name)s] {%(module)s -> %(funcName)s} %(message)s',
-                    datefmt='%d/%m/%Y %H:%M:%S')
-logging.getLogger(__name__).setLevel(logging.WARNING)
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 
 def main():
@@ -29,7 +23,7 @@ def main():
     output_file = Path(args.output)
     if not output_file:
         exit(1)
-    logging.info(f'output_file {output_file}')
+    
     directory = output_file.parent
     if not directory.exists():
         directory.mkdir(parents=True, exist_ok=True)
@@ -38,7 +32,7 @@ def main():
     file = Path(args.filename)
     if not file.exists():
         exit(1)
-    logging.info(f'file {file}')
+
     valid = extract(file, output_file)
     if valid is not True:
         logging.error(f'file {file.absolute()} can not be extraced')

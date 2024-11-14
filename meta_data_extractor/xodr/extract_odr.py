@@ -67,7 +67,8 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     # read xml and check if road and its element type exists --> take all information of road type and make them unique 
     road_types = set([road_type.attrib['type'] for road_type in root.findall('./road/type')]) if check_data(root,"./road/type","type") else None
     if road_types:
-        content_dict['hdmap:roadTypes'] = list(road_types)
+        capitalized_road_types = [s[0].upper() + s[1:] for s in road_types]
+        content_dict['hdmap:roadTypes'] = list(capitalized_road_types)
 
     # create a unique list of object type if it exists
     objects = set([obj['type'] for obj in data['object']]) if check_data(root, ".//object", "type") else None
@@ -218,11 +219,14 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     
     meta_data_dict = dict()
     meta_data_dict['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
-    meta_data_dict[f'{get_schema_name().lower()}:content'] = content_dict
-    meta_data_dict[f'{get_schema_name().lower()}:format'] = format_dict
-    if len(georeference_dict):
-        meta_data_dict[f'{get_schema_name().lower()}:georeference'] = georeference_dict
     meta_data_dict[f'{get_schema_name().lower()}:general'] = general_dict
+    meta_data_dict[f'{get_schema_name().lower()}:format'] = format_dict
+    meta_data_dict[f'{get_schema_name().lower()}:content'] = content_dict    
+    meta_data_dict[f'{get_schema_name().lower()}:quantity'] = {}
+    meta_data_dict[f'{get_schema_name().lower()}:quality'] = {}
+    meta_data_dict[f'{get_schema_name().lower()}:dataSource'] = {}
+    meta_data_dict[f'{get_schema_name().lower()}:georeference'] = georeference_dict
+    
 
     #data[f'{get_namespace()}:{get_schema_name().lower()}'] = meta_data_dict
 

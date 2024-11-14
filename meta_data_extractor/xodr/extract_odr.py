@@ -221,14 +221,8 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     meta_data_dict['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
     meta_data_dict[f'{get_schema_name().lower()}:general'] = general_dict
     meta_data_dict[f'{get_schema_name().lower()}:format'] = format_dict
-    meta_data_dict[f'{get_schema_name().lower()}:content'] = content_dict    
-    meta_data_dict[f'{get_schema_name().lower()}:quantity'] = {}
-    meta_data_dict[f'{get_schema_name().lower()}:quality'] = {}
-    meta_data_dict[f'{get_schema_name().lower()}:dataSource'] = {}
+    meta_data_dict[f'{get_schema_name().lower()}:content'] = content_dict
     meta_data_dict[f'{get_schema_name().lower()}:georeference'] = georeference_dict
-    
-
-    #data[f'{get_namespace()}:{get_schema_name().lower()}'] = meta_data_dict
 
     return meta_data_dict
 

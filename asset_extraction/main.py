@@ -149,11 +149,13 @@ def main():
     # Filter scripts that are applicable to the asset type
     applicable_scripts = filter_scripts_by_asset_type(configs, asset_type)
 
-    # Create output directory for the asset file
+    # Create, cleanup output directory for the asset file
     asset_name = asset_file.stem
     output_dir = Path(args.out)
     output_dir = output_dir.resolve()    
-    output_sub_dir = output_dir / asset_name     
+    output_sub_dir = output_dir / asset_name
+    if output_sub_dir.exists():
+        shutil.rmtree(output_sub_dir)
     output_sub_dir.mkdir(parents=True, exist_ok=True)
     print (f'output path {output_sub_dir}')  
 

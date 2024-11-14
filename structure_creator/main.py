@@ -1,8 +1,11 @@
+from pathlib import Path
 
 import argparse
 import json
 import shutil
-from pathlib import Path
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 extensions = {
     'png': 'Image',
@@ -125,7 +128,7 @@ def createFileName(filename: Path, asset_name: Path, type : str, index : int) ->
     if type in type_data:
         mask = type_data[type]['mask']
     else:
-        print (f'type {type} not found in type_data')
+        logging.error(f'type {type} not found in type_data')
         exit(1)
     basename = mask.replace(r"{file}", basename)
     basename = mask.replace(r"{asset}", asset_name)
@@ -156,13 +159,13 @@ def main():
     if not user_input_file.is_absolute():
         user_input_file = user_input_file.resolve()
     if not user_input_file.exists():
-        print (f'json file {user_input_file} not exists')
+        logging.error(f'json file {user_input_file} not exists')
         exit(1)
 
     if not data_path.is_absolute():
         data_path = data_path.resolve()
     if not data_path.exists():
-        print (f'data path {data_path} not exists')
+        logging.error(f'data path {data_path} not exists')
         exit(1)
 
     # read json
@@ -178,7 +181,7 @@ def main():
             asset_name = asset_name.stem
             break
     if not asset_name:
-        print (f'no asset found in {file}')
+        logging.error(f'no asset found in {file}')
         exit(1)
 
     # copy files
@@ -191,7 +194,7 @@ def main():
         if type in type_data:
             sub_folder = type_data[type]['folder']
         else:
-            print (f'type {type} not found in type_data')
+            logging.error(f'type {type} not found in type_data')
             exit(1)
         # get dest name
         dest_name = filename.name

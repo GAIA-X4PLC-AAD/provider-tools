@@ -6,7 +6,9 @@ import simplekml
 import argparse
 import json
 import math
+import logging
 
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 class Vec2:
     def __init__(self, x, y):
@@ -150,7 +152,7 @@ def main():
 
     xodr_file = Path(args.filename)
     if not xodr_file.exists():
-        print (f'xodr file {xodr_file} not exists')
+        logging.error(f'xodr file {xodr_file} not exists')
         exit(1)
 
     output_file = Path(args.out)
@@ -162,8 +164,8 @@ def main():
     # Parse the XML file and extract coordinates
     in_proj, offset, lines = parse_xml(xodr_file)
     if in_proj is None or lines is None:
-        print(f"no projection found!")    
-        return
+        logging.error(f"no projection found!")    
+        exit(1)
 
     # PROJ.4 projections
     #web_mecator = CRS.from_epsg(3857)
@@ -196,7 +198,7 @@ def main():
     else:
         create_kml(transformed_lines, output_file, False)
 
-    print(f"KML file created: {output_file}")
+    logging.info(f"KML file created: {output_file}")
 
 if __name__ == '__main__':
     main()

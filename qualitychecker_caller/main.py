@@ -1,14 +1,16 @@
-import subprocess
-import argparse
-import shutil
-
 from pathlib import Path
 from lxml import etree
 
+import subprocess
+import argparse
+import shutil
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 def update_config_file(template_file: Path, input_file: Path, result_file: Path, config_file: Path) -> Path:
     # Parse the XML file
-    print(f"Using template {template_file}")
+    logging.info(f"Using template {template_file}")
     tree = etree.parse(template_file)
     root = tree.getroot()
 
@@ -22,7 +24,7 @@ def update_config_file(template_file: Path, input_file: Path, result_file: Path,
 
     # Write the updated XML to the output file
     tree.write(config_file, encoding="utf-8", pretty_print=True, xml_declaration=True)
-    print(f"Created configuration file {config_file}")
+    logging.info(f"Created configuration file {config_file}")
 
     return config_file
 
@@ -37,7 +39,7 @@ def create_config_file(input_file: Path, result_file : Path) -> Path:
             template_file = file
             break
     if not template_file:
-        print (f'template for file type {file_type} not exists')
+        logging.error(f'template for file type {file_type} not exists')
         exit(1)
 
     return update_config_file(template_file, input_file, result_file, Path("qc_config.xml"))
@@ -51,7 +53,7 @@ def main():
 
     input_file = Path(args.filename)
     if not input_file.exists():
-        print (f'input file {input_file} not exists')
+        logging.error(f'input file {input_file} not exists')
         exit(1)
 
     # create config file from templates with input_file replacement
@@ -65,15 +67,15 @@ def main():
     script_call.append(config_file.as_posix())
 
     try:
-        print(f"start command {app_name}")
+        logging.info(f"start command {app_name}")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        print(f"end command {app_name} succeeded with output:")
-        print(result.stdout)  # print default output from sub process
-        print(result.stderr)  # print logging output from sub process
+        logging.info(f"end command {app_name} succeeded with output:")
+        logging.info(result.stdout)  # print default output from sub process
+        logging.info(result.stderr)  # print logging output from sub process
     except subprocess.CalledProcessError as e:
-        print(f"Command {app_name} failed with return code {e.returncode}")
-        print(f"Error output: {e.stderr}")
-        print(f"Error output: {e.stdout}")
+        logging.error(f"Command {app_name} failed with return code {e.returncode}")
+        logging.error(f"Error output: {e.stderr}")
+        logging.error(f"Error output: {e.stdout}")
         exit(1)
 
     # call openMSL opendrive

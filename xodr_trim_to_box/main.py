@@ -1,11 +1,12 @@
-
 from pathlib import Path
 from lxml import etree
 
+import logging
 import argparse
 import math
 import sys
 
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 # helper class for 2d bounding box
 class Box2D:
@@ -98,12 +99,12 @@ def reduceXODR(box, file_in, file_out):
     root = etree._Element()
 
     # read file and convert to tree structure    
-    print(f"read file {file_in.stem}")
+    logging.info(f"read file {file_in.stem}")
     try:
         tree = etree.parse(file_in)
         root = tree.getroot()
     except etree.ParseError as err:
-        print(f'cant load {file_in.stem}: {err.msg}')
+        logging.error(f'cant load {file_in.stem}: {err.msg}')
         return False
     
     junctions = {}

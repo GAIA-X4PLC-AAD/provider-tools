@@ -10,11 +10,7 @@ import logging
 import os
 
 # init logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s.%(msecs)03d [%(levelname)5s-%(name)s] {%(module)s -> %(funcName)s} %(message)s',
-                    datefmt='%d/%m/%Y %H:%M:%S')
-logging.getLogger(__name__).setLevel(logging.DEBUG)
-
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 # data string to data type
 dataTypeMap = {
@@ -184,7 +180,7 @@ def read_from_excel(table):
                 elif attrib_data['frequency'] == "nan":      
                     attrib_data['frequency_min'] = 0
                 else:
-                    print(type(attrib_data['frequency']))
+                    logging.info(type(attrib_data['frequency']))
                     logging.error(f'unsupported frequency: {attrib_data['frequency']} for {attrib}')
 
                 # fix unit
@@ -444,7 +440,7 @@ def main():
 
     table_file = args.table
     if not os.path.isfile(table_file):
-        print (f'table file {table_file} not exists')
+        logging.error(f'table file {table_file} not exists')
         exit(1)
     attributes = read_from_excel(table_file)
 

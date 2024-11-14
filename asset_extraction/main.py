@@ -1,11 +1,13 @@
+from pathlib import Path
+from zipfile import ZipFile
+
 import json
 import subprocess
 import argparse
 import shutil
+import logging
 
-from pathlib import Path
-from zipfile import ZipFile
-
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 def load_configs(config_dir: Path) -> list:
     configs = []
@@ -97,15 +99,16 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
 
     # run
     try:
-        print(f"start command {script_config['name']}")
+        #logging.info(script_call)
+        logging.info(f"start command {script_config['name']}")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        print(f"end command {script_config['name']} succeeded with output:")
-        print(result.stdout)  # print default output from sub process
-        print(result.stderr)  # print logging output from sub process
+        logging.info(f"end command {script_config['name']} succeeded with output:")
+        logging.info(result.stdout)  # print default output from sub process
+        logging.info(result.stderr)  # print logging output from sub process
     except subprocess.CalledProcessError as e:
-        print(f"Command {script_config['name']} failed with return code {e.returncode}")
-        print(f"Error output: {e.stderr}")
-        print(f"Error output: {e.stdout}")
+        logging.error(f"Command {script_config['name']} failed with return code {e.returncode}")
+        logging.error(f"Error output: {e.stderr}")
+        logging.error(f"Error output: {e.stdout}")
         exit(1)
 
 def create_zip(output_dir: Path, zip_filename : Path):
@@ -130,7 +133,7 @@ def main():
     config_dir = Path(args.config)
     config_dir = config_dir.resolve()
     if not config_dir.is_dir():
-        print (f'config path {config_dir} not exists')
+        logging.error(f'config path {config_dir} not exists')
         exit(1)
     configs = load_configs(config_dir)
 
@@ -138,9 +141,9 @@ def main():
     asset_file = Path(args.filename)
     asset_file = asset_file.resolve()
     if not asset_file.exists():
-        print (f'asset file {asset_file} not exists')
+        logging.error(f'asset file {asset_file} not exists')
         exit(1)
-    print (f'asset file {asset_file}')
+    logging.info(f'asset file {asset_file}')
     asset_type = asset_file.suffix.lstrip('.') # Get file extension without the dot
 
     # Filter scripts that are applicable to the asset type

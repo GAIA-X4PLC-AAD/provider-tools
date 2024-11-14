@@ -1,8 +1,11 @@
+from pathlib import Path
+from lxml import etree
 
 import argparse
 import subprocess
-from pathlib import Path
-from lxml import etree
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='Calls the java tool from VCS https://github.com/virtualcitySYSTEMS/opendriveconverter to convert an OpenDRIVE file into a geojson.')   
@@ -15,7 +18,7 @@ def main():
     if not xodr_file.is_absolute():
         xodr_file = xodr_file.resolve()
     if not xodr_file.exists():
-        print (f'json file {xodr_file} not exists')
+        logging.error(f'json file {xodr_file} not exists')
         exit(1)
         
     filename_out = Path(args.out)
@@ -44,13 +47,13 @@ def main():
     # run
     try:    
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        print(f"end command succeeded with output:")
-        print(result.stdout)  # print default output from sub process
-        print(result.stderr)  # print logging output from sub process
+        logging.info(f"end command succeeded with output:")
+        logging.info(result.stdout)  # print default output from sub process
+        logging.info(result.stderr)  # print logging output from sub process
     except subprocess.CalledProcessError as e:
-        print(f"Command failed with return code {e.returncode}")
-        print(f"Error output: {e.stderr}")
-        print(f"Error output: {e.stdout}")
+        logging.error(f"Command failed with return code {e.returncode}")
+        logging.error(f"Error output: {e.stderr}")
+        logging.error(f"Error output: {e.stdout}")
         exit(1)
 
 if __name__ == '__main__':

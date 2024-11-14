@@ -9,6 +9,8 @@ import argparse
 import requests
 import logging
 
+logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+
 gaiax_url_part = 'GAIA-X4PLC-AAD/ontology-management-base'
 
 def load_shacl_files(root_dir):
@@ -20,8 +22,13 @@ def load_shacl_files(root_dir):
 
 
 def load_jsonld_file(jsonld_file : Path):
+
+    if not jsonld_file.exists():
+        logging.error(f'JsonLD files not found: {jsonld_file}')
+        exit(1)  
+
     data_graph = Graph()
-    print(f'adding jsonld file to data graph: {jsonld_file}.')
+    logging.info(f'adding jsonld file to data graph: {jsonld_file}.')
     with open(jsonld_file) as f:
         data = json.load(f)
     data_graph.parse(data=json.dumps(data), format='json-ld')
@@ -37,10 +44,10 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
                                          allow_warnings=True  # Gibt Warnungen statt Fehler, falls nötig
                                          #debug=False
                                          )
-    print(f'Conforms: {conforms}')
+    logging.info(f'Conforms: {conforms}')
     if not conforms:
-        print('####### Validation errors: #######')
-        print(v_text)
+        logging.error('####### Validation errors: #######')
+        logging.error(v_text)
         sys.exit(400)        
 
 def get_shacl_urls_from_data(data_graph: Graph ):

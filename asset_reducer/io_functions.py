@@ -1,12 +1,14 @@
 from lxml import etree
 from pathlib import Path
+
 import json
 import pickle
+import logging
 
 # mapping table
 def load_mapping_table(mapping_file):
     if not Path(mapping_file).exists():
-        print(f"file '{mapping_file}' not exist.")
+        logging.info(f"file '{mapping_file}' not exist.")
         return None
     with open(mapping_file, 'r') as f:
         node_mapping = json.load(f)

@@ -1,17 +1,17 @@
 from pathlib import Path
 from rdflib import Graph
 
-import shutil
 import json
 import argparse
 import requests
 import logging
 
+logging.basicConfig(level=logging.INFO)
+
 gaiax_url_part = 'GAIA-X4PLC-AAD/ontology-management-base'
 
-def load_shacl_files(root_dir):
+def load_shacl_files(shacl_files):
     shacl_graph = Graph()
-    shacl_files = sorted(root_dir.glob('*_shacl.ttl'))
     for shacl_file in shacl_files:
         shacl_graph.parse(shacl_file, format='turtle')
     return shacl_graph
@@ -19,7 +19,6 @@ def load_shacl_files(root_dir):
 
 def load_jsonld_file(jsonld_file : Path):
     data_graph = Graph()
-    print(f'adding jsonld file to data graph: {jsonld_file}.')
     with open(jsonld_file) as f:
         data = json.load(f)
     data_graph.parse(data=json.dumps(data), format='json-ld')
@@ -30,13 +29,12 @@ def get_shacl_urls_from_data(data_graph: Graph ):
     prefixes = {prefix: str(namespace) for prefix, namespace in data_graph.namespace_manager.namespaces() if gaiax_url_part in str(namespace)}
     return prefixes
 
-def download_shacle(url_path : str, shacle_name: str, folder : Path) -> str:
+def download_shacle(url_path : str, shacle_name: str, folder : Path) -> Path:
     filename = f'{shacle_name}_shacl.ttl'
-    local_file_path = f'{folder}/{filename}'
+    local_file_path = Path(f'{folder}/{filename}')
 
-    if not Path(local_file_path).exists():
+    if not local_file_path.exists():
         # replace github link ro raw data link
-        new_url_path = 'https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/'
         new_url_path = url_path.replace('https://github.com/', 'https://raw.githubusercontent.com/')
         new_url_path = new_url_path.replace('/blob', '')
         new_url_path = new_url_path.replace('/tree', '')
@@ -62,14 +60,14 @@ def main():
 
     # load shacls
     shacl_folder = Path(__file__).parent.resolve() / 'shacles'
-    if shacl_folder.exists():
-        shutil.rmtree(shacl_folder)
-    shacl_folder.mkdir()        
+    if not shacl_folder.exists():
+        shacl_folder.mkdir()        
 
     prefixes = get_shacl_urls_from_data(data_graph)
+    shacl_files = []
     for key, value in prefixes.items():
-        download_shacle(value, key, shacl_folder)
-    shacl_graph = load_shacl_files(shacl_folder)
+        shacl_files.append(download_shacle(value, key, shacl_folder))
+    shacl_graph = load_shacl_files(shacl_files)
 
     output_path = Path(args.out)
     file = output_path / json_LD_file.with_suffix('.ttl')

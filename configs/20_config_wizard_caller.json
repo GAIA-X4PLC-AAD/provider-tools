@@ -9,6 +9,9 @@
 	"params" : 	{
 		"call" : "wizard_caller/main.py",
 		"input" : {"" : "{path}/{sub_path}/domainMetadata.json"},
-		"output" : {"-out" : "{path}/{sub_path}"}
+		"output" : {"-out" : "{path}/{sub_path}/domainMetadata.json"},
+		"additional" : {
+			"-shacl" : "{path}/{sub_path}/domainMetadata.ttl"
+		}	
 	}
 }

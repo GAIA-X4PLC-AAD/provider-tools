@@ -153,7 +153,8 @@ def getValue(name, values, check_lower_case : bool, optional=False):
                 return data
     
     if not optional:
-        logging.warning(f'{name} not found!!')
+        #logging.warning(f'{name} not found!!')
+        return 'http://www.w3.org/2001/XMLSchema#string' # default string
 
     return None
 

@@ -7,7 +7,7 @@
 	],
 	"params" : 	{
 		"call" : "xodr_to_geojson_caller/main.py",
-		"output" : {"-out" : "{path}/{sub_path}/detailRoadNetwork.geojson"},
+		"output" : {"-out" : "{path}/{sub_path}/3d_preview/detailRoadNetwork.geojson"},
         "additional" : {
 			"-path" : "{path}"
 		}	

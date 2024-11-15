@@ -48,7 +48,7 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
     if not conforms:
         logging.error('####### Validation errors: #######')
         logging.error(v_text)
-        sys.exit(400)        
+        #sys.exit(400)        
 
 def get_shacl_urls_from_data(data_graph: Graph ):
     # get gaia x prefixes

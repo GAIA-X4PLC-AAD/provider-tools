@@ -15,7 +15,8 @@ extensions = {
     'doc': 'Document',
     'geojson': 'Routing',
     'bjson' : 'AssetData', 
-    'zip' : 'Asset'
+    'zip' : 'Asset',
+    'json' : '3DPreview'
 }
 
 type_data = {
@@ -81,20 +82,27 @@ def get_file(user_data, filename: Path) -> Path:
             return file
     return None
 
-def register_asset(data: dict, filename: Path, role: str, category: str):
-    files = []   
 
+def create_file_data(filename: Path, data_type: str, role: str, category: str):
     file_data = {}
     file_data['manifest:accessRole'] = role
-    file_data['manifest:relativePath'] = str(filename)
-    file_data['manifest:type'] = get_data_typ(filename)
+    file_data['manifest:relativePath'] = filename.as_posix()
+    file_data['manifest:type'] = data_type
     file_data['manifest:format'] = filename.suffix.lstrip('.')
-    files.append(file_data)
-
-    data[category] = files
+    return file_data
 
 
-def register_data(data: dict, user_data: dict, path: Path, data_path: Path, role: str, category: str):
+def register_asset(data: dict, filename: Path, data_type: str, role: str, category: str):
+    files = []   
+    files.append(create_file_data(filename, data_type, role, category))
+    
+    if category in data:
+        data[category].extend(files)
+    else:
+        data[category] = files
+
+
+def register_folder(data: dict, user_data: dict, path: Path, data_path: Path, role: str, category: str):
     if not path.exists():
         return
     
@@ -104,17 +112,14 @@ def register_data(data: dict, user_data: dict, path: Path, data_path: Path, role
             continue
         file = get_file(user_data, filename.name)
         if file:
-            typ = file['type']
+            data_type = file['type']
         else:
-            typ = get_data_typ(filename)
+            data_type = get_data_typ(filename)
 
-        file_data = {}
-        file_data['manifest:accessRole'] = 'publicUser' if typ == 'Service' else role
-        relative_path = filename.relative_to(data_path).as_posix()
-        file_data['manifest:relativePath'] = str(relative_path)        
-        file_data['manifest:type'] = typ
-        file_data['manifest:format'] = filename.suffix.lstrip('.')
-        files.append(file_data)
+        if data_type == 'Service':
+            role = 'publicUser'
+        relative_path = filename.relative_to(data_path)
+        files.append(create_file_data(relative_path, data_type, role, category))
 
     if len(files):
         if category in data:
@@ -227,9 +232,19 @@ def main():
         else:
             type = 'manifest:contentData'
             role = 'publicUser'
-        register_data(data_group, user_data, sub_folder, data_path, role, type)
+        register_folder(data_group, user_data, sub_folder, data_path, role, type)
+
+    # register license
+    for file in user_data:
+        if file['type'] == 'License':
+            license_file = Path(file['filename'])
+            break
+    if license_file:
+        register_asset(data_group, license_file, 'License', 'registeredUser', 'manifest:contentData')
+
     # add asset zip
-    register_asset(data_group, Path('asset.zip'), 'owner', 'manifest:asset')     
+    asset_file = Path('asset.zip')
+    register_asset(data_group, asset_file, 'Asset', 'owner', 'manifest:asset')     
 
     # write metadata json 
     path = filename_out.parent

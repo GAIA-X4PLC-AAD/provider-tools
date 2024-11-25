@@ -7,9 +7,9 @@
 	],
 	"params" : 	{
 		"call" : "xodr_routing_creator/main.py",
-		"output" : {"-out" : "{path}/{sub_path}/roadNetwork.geojson"},
+		"output" : {"-out" : "{path}/asset/{sub_path}/roadNetwork.geojson"},
 		"additional" : {
-			"-box" : "{path}/{sub_path}/bbox.geojson"
+			"-box" : "{path}/asset/{sub_path}/bbox.geojson"
 		}		
 	}
 }

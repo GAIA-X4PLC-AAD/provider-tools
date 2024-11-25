@@ -30,7 +30,7 @@ def main():
     root.set("xmlns", "http://www.asam.de/ODR/16/")
 
     # write temp file
-    new_temp_file = temp_path / 'temp' / 'geojson'
+    new_temp_file = temp_path / 'geojson'
     new_temp_file.mkdir(parents=True, exist_ok=True)
     new_temp_file = new_temp_file / xodr_file.name 
     with open(new_temp_file, "wb") as f:

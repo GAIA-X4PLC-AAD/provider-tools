@@ -8,7 +8,7 @@
 	],
 	"params" : 	{
 		"call" : "shacl_combiner/main.py",
-		"input" : {"" : "{path}/{sub_path}/domainMetadata.json"},
-		"output" : {"-out" : "{path}/{sub_path}"}
+		"input" : {"" : "{path}/asset/{sub_path}/domainMetadata.json"},
+		"output" : {"-out" : "{path}/shacls-and-ontologies/used-shacls"}
 	}
 }

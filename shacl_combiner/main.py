@@ -70,7 +70,9 @@ def main():
     shacl_graph = load_shacl_files(shacl_files)
 
     output_path = Path(args.out)
-    file = output_path / json_LD_file.with_suffix('.ttl')
+    if not output_path.exists():
+        output_path.mkdir()    
+    file = output_path / Path(json_LD_file.stem + '.ttl')
     with open(file, 'w') as f:
         f.write(shacl_graph.serialize(format='turtle'))
         f.close()

@@ -57,7 +57,10 @@ def main():
         exit(1)
 
     # create config file from templates with input_file replacement
-    config_file = create_config_file(input_file, Path(args.out))
+    output_file = Path(args.out)
+    if not output_file.parent.exists():
+        output_file.parent.mkdir()   
+    config_file = create_config_file(input_file, output_file)
 
     # call qc_opendrive
     app_name = 'qc_opendrive'

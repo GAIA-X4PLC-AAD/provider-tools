@@ -33,7 +33,7 @@ type_data = {
         'mask' : '{asset}_technicalDocumentation'
     }, 
     'License' : {
-        'folder' : '',
+        'folder' : '../',
         'mask' : 'LICENSE'
     },
     'Metadata' : {

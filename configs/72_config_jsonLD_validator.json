@@ -8,6 +8,6 @@
 	],
 	"params" : 	{
 		"call" : "jsonLD_validator/main.py",
-		"input" : {"" : "{path}/manifest.json"}
+		"input" : {"" : "{path}/asset/manifest.json"}
 	}
 }

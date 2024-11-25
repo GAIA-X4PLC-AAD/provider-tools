@@ -165,7 +165,7 @@ def main():
 
     # Create a zip file of the output directory
     # remove temp folder before
-    temp_path = output_sub_dir / 'temp'
+    temp_path = output_sub_dir / Path('asset') / 'temp'
     shutil.rmtree(temp_path)
     # create zip
     zip_filename = output_sub_dir / f"asset.zip"

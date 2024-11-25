@@ -8,8 +8,8 @@
 	],
 	"params" : 	{
 		"call" : "jsonLD_creator/main.py",
-		"input" : {"" : "{path}/temp/{name}_extractor.json"},
-		"output" : {"-out" : "{path}/{sub_path}/domainMetadata.json"},
+		"input" : {"" : "{path}/asset/temp/{name}_extractor.json"},
+		"output" : {"-out" : "{path}/asset/{sub_path}/domainMetadata.json"},
 		"additional" : {
 			"-ontology" : "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main","-removeShacl" : ""            
 		}		

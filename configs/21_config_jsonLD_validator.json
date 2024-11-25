@@ -8,6 +8,6 @@
 	],
 	"params" : 	{
 		"call" : "jsonLD_validator/main.py",
-		"input" : {"" : "{path}/{sub_path}/domainMetadata.json"}
+		"input" : {"" : "{path}/asset/{sub_path}/domainMetadata.json"}
 	}
 }

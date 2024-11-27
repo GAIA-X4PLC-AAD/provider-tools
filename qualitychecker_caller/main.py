@@ -62,8 +62,13 @@ def main():
         output_file.parent.mkdir()   
     config_file = create_config_file(input_file, output_file)
 
-    # call qc_opendrive
-    app_name = 'qc_opendrive'
+    extension =  input_file.suffix.lstrip('.')
+    if extension == 'xodr':
+        app_name = 'qc_opendrive'
+    elif extension == 'xosc':
+        app_name = 'qc_openscenario'
+    
+    # call
     script_call = []
     script_call.append(app_name)
     script_call.append('-c')

@@ -368,6 +368,7 @@ def fill_properties(meta_data, schema_namespace, schema_name):
         else:
             if is_required_property(node_properties):
                 # create empty group
+                as_list = is_list_property(node_properties)
                 group = create_group(as_list, node_path_name, node_path, schema_name.lower(), config.JSON_OUT, level)
                 #fill_content(node, node_path, node_path_name, schema_namespace, group, shacl_dict, prefixes, meta_data_sub, level+1)
 

@@ -357,6 +357,8 @@ def load_openscenario_file(osc_path: Path) -> OpenSCENARIO:
     osc.map_location = (
         osc_path.parent / filepath).resolve()
     logging.debug(f'Loading map {osc.map_location}')
+    if not osc.map_location.exists():
+        exit(1)
     osc.map_et = ET.parse(osc.map_location).getroot()
     for catalog in sc.find('.//CatalogLocations'):
         if 'path' not in catalog.find('.//Directory').attrib or catalog.find('.//Directory').attrib['path'] == '':

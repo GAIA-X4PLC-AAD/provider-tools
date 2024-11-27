@@ -116,7 +116,7 @@ def create_zip(output_dir: Path, zip_filename : Path):
         for file_path in output_dir.rglob('*'):            
             if file_path.is_file():
                 filename = str(file_path.name)
-                if filename == 'manifest.json' or filename == 'asset.zip':
+                if filename == 'asset.zip':
                     continue
                 file_local = file_path.relative_to(output_dir)
                 zipf.write(file_path, file_local)
@@ -165,7 +165,7 @@ def main():
 
     # Create a zip file of the output directory
     # remove temp folder before
-    temp_path = output_sub_dir / Path('asset') / 'temp'
+    temp_path = output_sub_dir / 'temp'
     shutil.rmtree(temp_path)
     # create zip
     zip_filename = output_sub_dir / f"asset.zip"

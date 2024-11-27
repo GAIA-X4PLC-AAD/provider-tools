@@ -8,6 +8,6 @@
 	],
 	"params" : 	{
 		"call" : "qualitychecker_caller/main.py",
-		"output" : {"-o" : "{path}/asset/{sub_path}/{name}.xqar"}
+		"output" : {"-o" : "{path}/{sub_path}/{name}.xqar"}
 	}
 }

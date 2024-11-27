@@ -8,10 +8,10 @@
 	],
 	"params" : 	{
 		"call" : "wizard-caller/main.py",
-		"input" : {"" : "{path}/asset/{sub_path}/domainMetadata.json"},
-		"output" : {"-out" : "{path}/asset/{sub_path}/domainMetadata.json"},
+		"input" : {"" : "{path}/{sub_path}/domainMetadata.json"},
+		"output" : {"-out" : "{path}/{sub_path}/domainMetadata.json"},
 		"additional" : {
-			"-shacl" : "{path}/shacls-and-ontologies/used-shacls/domainMetadata.ttl"
+			"-shacl" : "{path}/temp/domainMetadata.ttl"
 		}	
 	}
 }

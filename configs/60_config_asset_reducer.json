@@ -7,7 +7,7 @@
 	],
 	"params" : 	{
 		"call" : "asset_reducer/main.py",
-		"output" : {"-out" : "{path}/asset/{sub_path}/{name}.bjson"},
+		"output" : {"-out" : "{path}/{sub_path}/{name}.bjson"},
 		"output format" : "bjson"
 	}
 }

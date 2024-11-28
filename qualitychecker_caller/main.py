@@ -28,18 +28,15 @@ def update_config_file(template_file: Path, input_file: Path, result_file: Path,
 
     return config_file
 
-def create_config_file(input_file: Path, result_file : Path) -> Path:
-    file_type = input_file.suffix.lstrip('.') # Get file extension without the dot
+def create_config_file(config_file_name: Path, input_file: Path, result_file : Path) -> Path:
+    #file_type = input_file.suffix.lstrip('.') # Get file extension without the dot
 
     script_folder = Path(__file__).parent
     templates_folder = script_folder / 'templates'
+    template_file = templates_folder / config_file_name
 
-    for file in templates_folder.iterdir():
-        if file.is_file() and file_type in file.name:
-            template_file = file
-            break
-    if not template_file:
-        logging.error(f'template for file type {file_type} not exists')
+    if not template_file.exists():
+        logging.error(f'template file not exist {template_file}')
         exit(1)
 
     return update_config_file(template_file, input_file, result_file, Path("qc_config.xml"))
@@ -49,6 +46,8 @@ def main():
     parser = argparse.ArgumentParser(prog='main.py', description='setup and run quality checker')
     parser.add_argument('filename', type=str,help='ASAM OpenX file, e.g. xodr, xosc')
     parser.add_argument('-out', type=str, help='output result file')
+    parser.add_argument('-config', type=str, help='name of config file in subfolder templates')    
+    parser.add_argument('-checkerbundle', type=str, help='name of checkerbundle')
     args = parser.parse_args()
 
     input_file = Path(args.filename)
@@ -60,13 +59,18 @@ def main():
     output_file = Path(args.out)
     if not output_file.parent.exists():
         output_file.parent.mkdir()   
-    config_file = create_config_file(input_file, output_file)
 
-    extension =  input_file.suffix.lstrip('.')
-    if extension == 'xodr':
-        app_name = 'qc_opendrive'
-    elif extension == 'xosc':
-        app_name = 'qc_openscenario'
+    config_file_name = Path(args.config)
+    if not config_file_name:
+        logging.error(f'missing config file {config_file_name}')
+        exit(1)    
+
+    config_file = create_config_file(config_file_name, input_file, output_file)
+
+    app_name = args.checkerbundle
+    if not app_name:
+        logging.error(f'app name not valid {app_name}')
+        exit(1)
     
     # call
     script_call = []

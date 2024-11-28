@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Config>
+
+    <Param name="InputFile" value="test.xodr" />
+
+    <CheckerBundle application="xodrBundle">
+        <Param name="resultFile" value="xodr_bundle_report.xqar" />
+        <Checker checkerId="check_openmsl_xodr_road_geometry_length" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_road_geometry_parampoly3_attributes" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_road_min_length" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_crg_reference" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_junction_connection_lane_link_id" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_junction_connection_lane_linkage_oder" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_junction_connection_road_linkage" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_road_lane_link_id" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_road_lane_type_none" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_road_lanesection_min_length" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_statistic" maxLevel="1" minLevel="3" />
+        <Checker checkerId="check_openmsl_xodr_road_type_vs_speed_limit" maxLevel="1" minLevel="3" />
+    </CheckerBundle>
+
+    <ReportModule application="TextReport">
+        <Param name="strInputFile" value="Result.xqar" />
+        <Param name="strReportFile" value="Report.txt" />
+    </ReportModule>
+
+    <ReportModule application="ReportGUI">
+        <Param name="strInputFile" value="Result.xqar" />
+    </ReportModule>
+
+</Config>

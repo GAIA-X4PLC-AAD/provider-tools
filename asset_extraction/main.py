@@ -121,6 +121,13 @@ def create_zip(output_dir: Path, zip_filename : Path):
                 file_local = file_path.relative_to(output_dir)
                 zipf.write(file_path, file_local)
 
+def get_asset_type_extension(asset_file: Path):
+    asset_type = asset_file.suffix.lstrip('.') # Get file extension without the dot
+    if asset_type == 'zip' or asset_type == '7z':
+        asset_type = '3dmodel'
+    return asset_type
+
+
 def main():
     # parse arguments
     parser = argparse.ArgumentParser(prog='main.py', description='extracted from asset and user infos all extractor/creator scripts are called to create an asset archive.')
@@ -144,7 +151,7 @@ def main():
         logging.error(f'asset file {asset_file} not exists')
         exit(1)
     logging.info(f'asset file {asset_file}')
-    asset_type = asset_file.suffix.lstrip('.') # Get file extension without the dot
+    asset_type = get_asset_type_extension(asset_file)
 
     # Filter scripts that are applicable to the asset type
     applicable_scripts = filter_scripts_by_asset_type(configs, asset_type)

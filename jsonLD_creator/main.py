@@ -514,6 +514,7 @@ def main():
 
     # read attribute data
     claim_path = Path(args.filename)
+    claim_path = claim_path.resolve()
     if not claim_path.exists():
         logging.exception(f'Could not find file {claim_path}')
         exit(1)

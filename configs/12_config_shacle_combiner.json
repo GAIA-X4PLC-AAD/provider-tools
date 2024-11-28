@@ -4,7 +4,8 @@
 	"data folder" : "metadata",
 	"asset types" :	[
 		{ "extension" : "xodr" }, 
-		{ "extension" : "xosc" }
+		{ "extension" : "xosc" },
+        { "extension" : "3dmodel" }
 	],
 	"params" : 	{
 		"call" : "shacl_combiner/main.py",

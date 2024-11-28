@@ -359,7 +359,6 @@ def load_openscenario_file(osc_path: Path) -> OpenSCENARIO:
     logging.debug(f'Loading map {osc.map_location}')
     if not osc.map_location.exists():
         exit(1)
-    osc.map_et = ET.parse(osc.map_location).getroot()
     for catalog in sc.find('.//CatalogLocations'):
         if 'path' not in catalog.find('.//Directory').attrib or catalog.find('.//Directory').attrib['path'] == '':
             continue
@@ -1154,8 +1153,8 @@ def get_general_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Pa
     #meta_data_dict['scenario:type'] = 'scenario'
     general_dict = dict()
     description_dict = dict()
-    description_dict['gx:name'] = file_path.name.replace('.xosc', '')
-    fill_from_header_value(meta_data_dict, 'gx:description', sc_header, ['description'], default_value)
+    description_dict['general:name'] = file_path.name.replace('.xosc', '')
+    fill_from_header_value(description_dict, 'general:description', sc_header, ['description'], default_value)
     general_dict['general:description'] = description_dict
 
     ### format
@@ -1213,11 +1212,9 @@ def get_general_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Pa
                 link_data['general:url'] = license.attrib['resource']
             links_data.append(link_data)
             links_dic['general:media'] = link_data
-    if len(links_dic):
-        meta_data_dict['general:links'] = links_dic
-
-    ### price
-    #meta_data_dict['price'] = default_value
+    # not used yet -> should be defined in manifest file
+    #if len(links_dic):
+    #    general_dict['general:links'] = links_dic
 
 
 def convert_env_to_string(env: etree._Element) -> str:
@@ -1377,17 +1374,22 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
 
     ### structural
     structural_dict = dict()
-    catalgos = ''
-    separator = ', '
+    catalogs = []
     catalog_locatisons = osc.scenario_et.find('.//CatalogLocations')
     if catalog_locatisons is not None:        
         for catalog in catalog_locatisons:
-            catalgos += str(catalog.find('Directory').attrib['path']) + separator
-    if catalgos.endswith(separator):
-        catalgos = catalgos[:-len(separator)]
-    if catalgos == '':
-        catalgos = default_value
-    structural_dict['scenario:catalogs'] = catalgos
+            catalogs.append(str(catalog.find('Directory').attrib['path']))
+
+    links_dic = dict()            
+    if len(catalogs):
+        links_data = list()
+        for link in catalogs:
+            link_data = dict()
+            link_data['general:type'] = 'Document'
+            link_data['general:url'] =  link
+            links_data.append(link_data)
+        links_dic['general:data'] = links_data        
+    structural_dict['scenario:catalogs'] = links_dic
     road_network = osc.scenario_et.find('.//LogicFile')
     if road_network is not None:
         structural_dict['scenario:trafficSpace'] = road_network.attrib['filepath']
@@ -1404,14 +1406,11 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
 def get_meta_data(osc: OpenSCENARIO, file_path: Path, default_value: str = "Unknown", unknown_unit: str = "Unknown Unit") -> dict:
     
     meta_data_dict = dict()
+    meta_data_dict['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
     get_general_meta_data(meta_data_dict, osc, file_path, default_value, unknown_unit)
     get_osc_meta_data(meta_data_dict, osc, file_path, default_value, unknown_unit)
 
-    data = {}
-    data['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
-    data[f'{get_namespace()}:{get_schema_name().lower()}'] = meta_data_dict
-
-    return data
+    return meta_data_dict
 
 
 def extract_meta_data(file: Path) -> Tuple[bool, dict]:

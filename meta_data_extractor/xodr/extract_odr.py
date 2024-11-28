@@ -160,8 +160,8 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
 
     # if it is a xodr file it describes road network
     general_description_dict = dict()
-    general_description_dict['gx:description'] = "road network"
-    general_description_dict['gx:name'] = file_path.name.replace('.xodr', '')
+    general_description_dict['general:description'] = "road network"
+    general_description_dict['general:name'] = file_path.name.replace('.xodr', '')
     general_dict['general:description'] = general_description_dict
 
     # xodr files are from Opendrive and here is their link

@@ -200,6 +200,15 @@ def create_group(as_list, node_path_name, node_path, schema_name, parent_group, 
         parent_group[node_path_name] = group
     return group
 
+def find_node_path_in_shacles(node_path):
+    name = convert_path_to_namespace(node_path)
+    namespace, namespace_name = get_namespace(name)
+    if namespace in config.SHACLS:
+        shacl_graph = config.SHACLS[namespace]
+        prefixes = shacl_graph['prefixes']
+        shacl_dict = shacl_graph['dict']
+        return namespace, shacl_dict, prefixes
+    return None
 
 def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict, prefixes, meta_data, level):
 
@@ -211,7 +220,11 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
         prop_name = getValue('name', properties, False)
         prop_node = getValue('node', properties, False, True)        
         if prop_node: # property has sub structure
-            if prop_node in shacl_dict:
+            shacl_data = find_node_path_in_shacles(prop_node)
+            if shacl_data is None:
+                continue
+            namespace_add, shacl_dict_add, prefixes_add = shacl_data
+            if prop_node in shacl_dict_add:
                 node = shacl_dict[prop_node]
                 node_path_name = getValue('path', properties, False)
                 node_path_name = convert_path_to_namespace(node_path_name, False, schema_name)
@@ -291,44 +304,49 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
     if isinstance(group, list):
         group.append(prop_group)
 
+
 def fill_properties_in_other_namespace(node_path, schema_namespace, meta_data, level):
     # then switch to specific shacle
-    name = convert_path_to_namespace(node_path)
-    namespace, namespace_name = get_namespace(name)
-    if namespace in config.SHACLS:
-        shacl_graph_add = config.SHACLS[namespace]
-        prefixes_add = shacl_graph_add['prefixes']
-        shacl_dict_add = shacl_graph_add['dict']
-        if node_path in shacl_dict_add:
+    shacl_data = find_node_path_in_shacles(node_path)
+    if shacl_data is None:
+        return
+    namespace, shacl_dict_add, prefixes_add = shacl_data
+    #name = convert_path_to_namespace(node_path)
+    #namespace, namespace_name = get_namespace(name)
+    #if namespace in config.SHACLS:
+    #    shacl_graph_add = config.SHACLS[namespace]
+    #    prefixes_add = shacl_graph_add['prefixes']
+    #    shacl_dict_add = shacl_graph_add['dict']
+    #    if node_path in shacl_dict_add:
             # if node_path in metadata
-            group_name = convert_path_to_namespace(node_path, True, schema_namespace)
-            if group_name in meta_data:
-                # switch to subgraph
-                meta_data_sub = meta_data[group_name]
-                group_dict = create_group(False, group_name, node_path, None, config.JSON_OUT, level)
-                schema_shape_add = shacl_dict_add[node_path]
-                # loop properties in specific shacle
-                for node_properties_add in schema_shape_add:
-                    node_path_add = getValue('node', node_properties_add, False)
-                    if node_path_add in shacl_dict_add:
-                        # check if node in meta data
-                        node_path_name = getValue('path', node_properties_add, False)
-                        node_path_name = convert_path_to_namespace(node_path_name, True, namespace)
-                        if node_path_name in meta_data_sub:
-                            # create sub group and fill sub content
-                            node = shacl_dict_add[node_path_add]
-                            as_list_add = is_list_property(node_properties_add)
-                            meta_data_sub_sub = meta_data_sub[node_path_name]
-                            group = create_group(as_list_add, node_path_name, node_path_add, namespace, group_dict, level+1)
-                            fill_content(node, node_path_add, node_path_name, namespace, group, shacl_dict_add, prefixes_add, meta_data_sub_sub, level+2)
-                        else:
-                            if is_required_property(node_properties_add):
-                                # create empty group
-                                node = shacl_dict_add[node_path_add]
-                                as_list_add = is_list_property(node_properties_add)
-                                group = create_group(as_list_add, node_path_name, node_path_add, namespace, group_dict, level+1)
-                            #return # not filled in meta_data - ignore
-                return # next node property from original shacl             
+    group_name = convert_path_to_namespace(node_path, True, schema_namespace)
+    if group_name in meta_data:
+        # switch to subgraph
+        meta_data_sub = meta_data[group_name]
+        group_dict = create_group(False, group_name, node_path, None, config.JSON_OUT, level)
+        schema_shape_add = shacl_dict_add[node_path]
+        # loop properties in specific shacle
+        for node_properties_add in schema_shape_add:
+            node_path_add = getValue('node', node_properties_add, False)
+            if node_path_add in shacl_dict_add:
+                # check if node in meta data
+                node_path_name = getValue('path', node_properties_add, False)
+                node_path_name = convert_path_to_namespace(node_path_name, True, namespace)
+                if node_path_name in meta_data_sub:
+                    # create sub group and fill sub content
+                    node = shacl_dict_add[node_path_add]
+                    as_list_add = is_list_property(node_properties_add)
+                    meta_data_sub_sub = meta_data_sub[node_path_name]
+                    group = create_group(as_list_add, node_path_name, node_path_add, namespace, group_dict, level+1)
+                    fill_content(node, node_path_add, node_path_name, namespace, group, shacl_dict_add, prefixes_add, meta_data_sub_sub, level+2)
+                else:
+                    if is_required_property(node_properties_add):
+                        # create empty group
+                        node = shacl_dict_add[node_path_add]
+                        as_list_add = is_list_property(node_properties_add)
+                        group = create_group(as_list_add, node_path_name, node_path_add, namespace, group_dict, level+1)
+                    #return # not filled in meta_data - ignore
+        return # next node property from original shacl             
 
 def fill_properties(meta_data, schema_namespace, schema_name):
     shacl_graph_data = config.SHACLS[schema_namespace]

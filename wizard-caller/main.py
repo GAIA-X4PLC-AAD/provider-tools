@@ -1,8 +1,19 @@
 from pathlib import Path
 
-import webbrowser
 import logging
 import argparse
+import requests
+
+def trigger_open_sd_wizard():
+    try:
+        nodejs_server_url = 'http://127.0.0.1:3000/openSdWizard'
+        response = requests.post(nodejs_server_url)
+        if response.status_code == 200:
+            print("Triggered the SD Wizard successfully")
+        else:
+            print(f"Failed to trigger SD Wizard: {response.status_code}")
+    except Exception as e:
+        print(f"Error triggering SD Wizard: {e}")
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='calls the sd creation wizard with json and merged shacl file to fill the non-extractable attributes from the user')
@@ -22,8 +33,7 @@ def main():
         exit(1)
 
     # call sd wizrad in docker composed
-    url = "http://localhost:80/form" # SD-Creation-Wizard
-    webbrowser.open(url)
+    trigger_open_sd_wizard()
     # TODO - use jsonLD_file, shacl_file
 
     # get enhanced jsonLD file from docker 

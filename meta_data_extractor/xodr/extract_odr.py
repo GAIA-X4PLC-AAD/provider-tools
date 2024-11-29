@@ -172,7 +172,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     georeference_dict = dict()
     if geo_reference:
         projection_location_dict = dict()
-        georeference_dict['georeference:projectlocation'] = projection_location_dict
+        georeference_dict['georeference:projectLocation'] = projection_location_dict
         bounding_dict = dict()
         bounding_dict['xMin'] = float(root.find('.//header').attrib['west']) if check_data(root, ".//header", "west") else unknown_unit
         bounding_dict['xMax'] = float(root.find('.//header').attrib['east']) if check_data(root, ".//header", "east") else unknown_unit
@@ -202,7 +202,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         viewpoint_dict['georeference:lat'] = str(center_lat)
         viewpoint_dict['georeference:lon'] = str(center_lon)
         geodetic_ref_system_dict['georeference:viewpoint'] = viewpoint_dict  
-        georeference_dict['georeference:geodeticreferencesystem'] = geodetic_ref_system_dict
+        georeference_dict['georeference:geodeticReferenceSystem'] = geodetic_ref_system_dict
 
     ###################################################################################################################
     # unfinished meta data

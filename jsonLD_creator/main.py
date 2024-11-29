@@ -135,12 +135,12 @@ def convert_path_to_namespace(path, as_node_name=False, namespace=None):
     parts = path.split('/')
     last_parts = parts[-2:]
     last_parts[-1] = last_parts[-1].replace('Shape', '')
+    if as_node_name:
+        last_parts[-1] = last_parts[-1][0].lower()+ last_parts[-1][1:]
     if namespace:
         last_parts[0] = namespace
     separator = ':'
     namespace = separator.join(last_parts)
-    if as_node_name:
-        namespace = namespace.lower()
     return namespace
 
 def getValue(name, values, check_lower_case : bool, optional=False):
@@ -182,23 +182,42 @@ def is_in_namespace(name, namespace):
         return True
     return False
 
+def create_group_name(node_path: str, forType: bool):
+    last_part = node_path.rstrip('/').split('/')[-1]
+    if last_part.endswith("Shape"):
+        last_part = last_part[:-len("Shape")]
+    if forType:
+        return last_part
+    else:
+        return last_part[0].lower() + last_part[1:]
 
-def create_group(as_list, node_path_name, node_path, schema_name, parent_group, level, register=True):
-    if 'georeference:projectlocation' == node_path_name:
+
+def get_schema_from_node_path(node_path: str):
+    parts = node_path.split('/')
+    return parts[-2]
+
+
+# create group with type, e.g
+#   "hdmap:georeference": {
+#    "@type": "georeference:Georeference",
+def create_group(as_list, group_name, node_path, parent_group, level, register=True):
+
+    if group_name == "hdmap:georeference":
         found = True
     # create group
     if as_list:
         group = list()
-        logging.debug(f'{" " * level * 3}add list {node_path_name}')  
+        logging.debug(f'{" " * level * 3}add list {group_name}')  
 
     else:
         group = dict()
-        group['@type'] = convert_path_to_namespace(node_path, False, schema_name)
-        logging.debug(f'{" " * level * 3}add dict {node_path_name}')  
+        group['@type'] = convert_path_to_namespace(node_path, False, get_schema_from_node_path(node_path))
+        logging.debug(f'{" " * level * 3}add dict {group_name}')  
 
     if register:
-        parent_group[node_path_name] = group
+        parent_group[group_name] = group
     return group
+
 
 def find_node_path_in_shacles(node_path):
     name = convert_path_to_namespace(node_path)
@@ -213,7 +232,7 @@ def find_node_path_in_shacles(node_path):
 def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict, prefixes, meta_data, level):
 
     # create properties group
-    prop_group = create_group(False, node_path_name, node_path, schema_name, group, level, False)
+    prop_group = create_group(False, node_path_name, node_path, group, level, False)
 
     # loop properties
     for properties in node:                     
@@ -233,7 +252,7 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
                     continue
                 # create sub group and fill sub content
                 meta_data_sub = meta_data[node_path_name]
-                group_sub = create_group(isList_sub, node_path_name, prop_node, schema_name, group, level)
+                group_sub = create_group(isList_sub, node_path_name, prop_node, group, level)
                 if isinstance(meta_data_sub, list):                    
                     for meta_sub_element in meta_data_sub:
                         fill_content(node, prop_node, node_path_name, schema_name, group_sub, shacl_dict, prefixes, meta_sub_element, level+1)
@@ -311,19 +330,11 @@ def fill_properties_in_other_namespace(node_path, schema_namespace, meta_data, l
     if shacl_data is None:
         return
     namespace, shacl_dict_add, prefixes_add = shacl_data
-    #name = convert_path_to_namespace(node_path)
-    #namespace, namespace_name = get_namespace(name)
-    #if namespace in config.SHACLS:
-    #    shacl_graph_add = config.SHACLS[namespace]
-    #    prefixes_add = shacl_graph_add['prefixes']
-    #    shacl_dict_add = shacl_graph_add['dict']
-    #    if node_path in shacl_dict_add:
-            # if node_path in metadata
     group_name = convert_path_to_namespace(node_path, True, schema_namespace)
     if group_name in meta_data:
         # switch to subgraph
         meta_data_sub = meta_data[group_name]
-        group_dict = create_group(False, group_name, node_path, None, config.JSON_OUT, level)
+        group_dict = create_group(False, group_name, node_path, config.JSON_OUT, level)
         schema_shape_add = shacl_dict_add[node_path]
         # loop properties in specific shacle
         for node_properties_add in schema_shape_add:
@@ -337,14 +348,14 @@ def fill_properties_in_other_namespace(node_path, schema_namespace, meta_data, l
                     node = shacl_dict_add[node_path_add]
                     as_list_add = is_list_property(node_properties_add)
                     meta_data_sub_sub = meta_data_sub[node_path_name]
-                    group = create_group(as_list_add, node_path_name, node_path_add, namespace, group_dict, level+1)
+                    group = create_group(as_list_add, node_path_name, node_path_add, group_dict, level+1)
                     fill_content(node, node_path_add, node_path_name, namespace, group, shacl_dict_add, prefixes_add, meta_data_sub_sub, level+2)
                 else:
                     if is_required_property(node_properties_add):
                         # create empty group
                         node = shacl_dict_add[node_path_add]
                         as_list_add = is_list_property(node_properties_add)
-                        group = create_group(as_list_add, node_path_name, node_path_add, namespace, group_dict, level+1)
+                        group = create_group(as_list_add, node_path_name, node_path_add, group_dict, level+1)
                     #return # not filled in meta_data - ignore
         return # next node property from original shacl             
 
@@ -381,14 +392,13 @@ def fill_properties(meta_data, schema_namespace, schema_name):
             # create sub group and fill sub content
             meta_data_sub = meta_data[node_path_name]
             as_list = is_list_property(node_properties)
-            group = create_group(as_list, node_path_name, node_path, schema_name.lower(), config.JSON_OUT, level)
+            group = create_group(as_list, node_path_name, node_path, config.JSON_OUT, level)
             fill_content(node, node_path, node_path_name, schema_namespace, group, shacl_dict, prefixes, meta_data_sub, level+1)
         else:
             if is_required_property(node_properties):
                 # create empty group
                 as_list = is_list_property(node_properties)
-                group = create_group(as_list, node_path_name, node_path, schema_name.lower(), config.JSON_OUT, level)
-                #fill_content(node, node_path, node_path_name, schema_namespace, group, shacl_dict, prefixes, meta_data_sub, level+1)
+                group = create_group(as_list, node_path_name, node_path, config.JSON_OUT, level)
 
 
 def get_prefix_for_uri(uri, graph):

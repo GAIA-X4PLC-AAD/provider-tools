@@ -1159,7 +1159,7 @@ def get_general_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Pa
 
     ### format
     format_dict = dict()
-    format_dict['scenario:formatType'] = 'OpenSCENARIO'
+    format_dict['scenario:formatType'] = 'ASAM OpenSCENARIO'
     fill_from_header_value(format_dict, 'scenario:version', sc_header, ['revMajor', 'revMinor'], default_value, lambda sc_header, _: f'{sc_header.attrib["revMajor"]}.{sc_header.attrib["revMinor"]}')
     meta_data_dict['scenario:format'] = format_dict
 

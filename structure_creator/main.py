@@ -7,7 +7,9 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
-extensions = {
+extensions = {"pdf", "png", "mp4", "geojson", "zip", "json", "txt", "xodr", "md", "html", "did" "other"}
+
+extensions_to_category = {
     'png': 'Image',
     'mp4': 'Video',
     'txt': 'Document',
@@ -15,8 +17,20 @@ extensions = {
     'doc': 'Document',
     'geojson': 'Routing',
     'bjson' : 'AssetData', 
+    'xqar' : 'MetaData',
     'zip' : 'Asset',
     'json' : '3DPreview'
+}
+
+category_to_type = {
+   'Image' : 'visualization',
+   'Video' : 'visualization',
+   '3DPreview' : 'visualization',
+   'Routing' : 'visualization',
+   'Document' : 'documentation',
+   'AssetData' : 'assetData',
+   'Asset' : 'assetData',
+   'MetaData' : 'metadata',
 }
 
 type_data = {
@@ -64,8 +78,8 @@ type_data = {
 
 def get_data_typ(file: Path)-> str:
     extension = file.suffix.lstrip('.') # Get file extension without the dot
-    if extension in extensions:
-        typ = extensions[extension]
+    if extension in extensions_to_category:
+        typ = extensions_to_category[extension]
         if typ is not None:
             return typ
     # try with subfolder
@@ -82,13 +96,19 @@ def get_file(user_data, filename: Path) -> Path:
             return file
     return None
 
+def get_file_type(filename: Path):
+    file_ext = filename.suffix.lstrip('.')
+    if file_ext in extensions:
+        return file_ext
+    else:
+        return "other"
 
 def create_file_data(filename: Path, data_type: str, role: str, category: str):
     file_data = {}
     file_data['manifest:accessRole'] = role
-    file_data['manifest:relativePath'] = filename.as_posix()
+    file_data['manifest:path'] = filename.as_posix()
     file_data['manifest:type'] = data_type
-    file_data['manifest:format'] = filename.suffix.lstrip('.')
+    file_data['manifest:format'] = get_file_type(filename)
     return file_data
 
 
@@ -101,24 +121,45 @@ def register_asset(data: dict, filename: Path, data_type: str, role: str, catego
     else:
         data[category] = files
 
+def get_data_type(file_type:str):
+    if file_type in category_to_type:
+        return category_to_type[file_type]
+    else:
+        return 'other'
+
+
+def handle_bjson(relative_path, data_type, role, data):
+    files = []
+    category = 'manifest:contentData'
+    files.append(create_file_data(relative_path, data_type, role, category))
+
+    if category in data:
+        data[category].extend(files)
+    else:
+        data[category] = files
+
 
 def register_folder(data: dict, user_data: dict, path: Path, data_path: Path, role: str, category: str):
     if not path.exists():
         return
     
-    files = []    
+    files = []  
     for filename in path.rglob("*"):
         if filename.is_dir():
             continue
         file = get_file(user_data, filename.name)
         if file:
-            data_type = file['type']
+            file_type = file['type']
         else:
-            data_type = get_data_typ(filename)
+            file_type = get_data_typ(filename)
 
-        if data_type == 'Service':
+        if file_type == 'Service':
             role = 'publicUser'
+        data_type = get_data_type(file_type)
         relative_path = filename.relative_to(data_path)
+        if filename.suffix.lstrip('.') == 'bjson':
+            handle_bjson(relative_path, data_type, role, data)
+            continue
         files.append(create_file_data(relative_path, data_type, role, category))
 
     if len(files):
@@ -240,11 +281,13 @@ def main():
             license_file = Path(file['filename'])
             break
     if license_file:
-        register_asset(data_group, license_file, 'License', 'registeredUser', 'manifest:contentData')
+        licence_group = {}
+        data['manifest:license'] = licence_group
+        register_asset(licence_group, license_file, 'license', 'registeredUser', 'manifest:licenseData')
 
     # add asset zip
-    asset_file = Path('asset.zip')
-    register_asset(data_group, asset_file, 'Asset', 'owner', 'manifest:asset')     
+    #asset_file = Path('asset.zip')
+    #register_asset(data_group, asset_file, 'assetData', 'owner', 'manifest:asset')     
 
     # write metadata json 
     path = filename_out.parent

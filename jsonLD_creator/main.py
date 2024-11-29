@@ -158,6 +158,13 @@ def getValue(name, values, check_lower_case : bool, optional=False):
 
     return None
 
+def get_property_value(name, values):
+    for key, data in values.items():
+        key_str = key.split("#")[-1]
+        if name == key_str:
+            return data        
+    return None        
+
 
 def get_data_from_metadata(path, meta_data):
     if path in meta_data:           
@@ -309,7 +316,8 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
         else:
             continue
 
-        if data_type:# and "xsd:string" not in data_type:
+        sh_in = get_property_value('in', properties)
+        if data_type and not sh_in: # no type for enums!
             property['@type'] = data_type
         
         # register

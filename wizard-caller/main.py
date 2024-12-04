@@ -1,13 +1,13 @@
 from pathlib import Path
 
+import time
 import logging
 import argparse
 import requests
 
-def trigger_open_sd_wizard():
+def trigger_open_sd_wizard(endpoint_url):
     try:
-        nodejs_server_url = 'http://127.0.0.1:3000/openSdWizard'
-        response = requests.post(nodejs_server_url)
+        response = requests.post(endpoint_url)
         if response.status_code == 200:
             print("Triggered the SD Wizard successfully")
         else:
@@ -15,6 +15,45 @@ def trigger_open_sd_wizard():
     except Exception as e:
         print(f"Error triggering SD Wizard: {e}")
 
+def post_filepath(file_path, endpoint_url, output_path = None):
+    try:
+        data = {"file_path": file_path, 'meta_data_location': output_path} if output_path is not None else {"file_path": file_path}
+        response = requests.post(endpoint_url,json = data)
+        if response.status_code == 200:
+            print("Tools successfully sent file path: "+ file_path)
+            if output_path is not None : print("and meta data location: " + output_path)
+        else:
+            print(f"Tools got sending error: {response.status_code}")
+    except Exception as e:
+        print(f"Error sending file path: {e}")
+'''
+def get_combined_json(endpoint_url, output_path):
+    try:
+        response = requests.get(endpoint_url) # i need to wait here for the responce with the json content
+        if response.status_code == 200:
+            print("Tools successfully received the combined json")
+            data = response.json()
+            print(data)
+            with open(output_path, 'wb') as f:
+                f.write(data['combindJsonContent'])
+        else:
+            print(f"Tools got receiving error: {response.status_code}")
+    except Exception as e:
+        print(f"Error receiving the combined json: {e}")
+'''
+def check_combined_json(endpoint_url):
+    while True:
+        response = requests.get(endpoint_url)  # Repeat the GET request
+        if response.status_code == 204:
+            print("File is not ready yet, sleeping 10 seconds ...")
+            time.sleep(10)
+        elif response.status_code == 200:
+            print("File is ready, continue execution")
+            return  # Exit the function when the file is ready
+        else:
+            print(f"Tools got receiving error: {response.status_code}")
+            break  # Exit the loop if there is an error
+        
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='calls the sd creation wizard with json and merged shacl file to fill the non-extractable attributes from the user')
     parser.add_argument('filename', type=str,help='filename of json LD file')
@@ -33,14 +72,18 @@ def main():
         exit(1)
 
     # call sd wizrad in docker composed
-    trigger_open_sd_wizard()
-    # TODO - use jsonLD_file, shacl_file
+    trigger_open_sd_wizard('http://127.0.0.1:3000/openSdWizard')
 
+    # TODO - use jsonLD_file, shacl_file
+    output_path = Path(args.out) 
+    post_filepath(str(jsonLD_file), 'http://127.0.0.1:3000/processJsonLDFile', str(output_path))
+    post_filepath(str(shacl_file), 'http://127.0.0.1:3000/processShaclFile')
     # get enhanced jsonLD file from docker 
     # TODO get enhanced jsonLD file
-
     # copy to target file location
-    output_name = Path(args.out)    
+    #output_path = Path(args.out)  
+    check_combined_json('http://127.0.0.1:3000/processCombinedJsonFile')
+   
     # TODO copy to target location
 
 

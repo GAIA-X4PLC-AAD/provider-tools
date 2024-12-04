@@ -26,21 +26,7 @@ def post_filepath(file_path, endpoint_url, output_path = None):
             print(f"Tools got sending error: {response.status_code}")
     except Exception as e:
         print(f"Error sending file path: {e}")
-'''
-def get_combined_json(endpoint_url, output_path):
-    try:
-        response = requests.get(endpoint_url) # i need to wait here for the responce with the json content
-        if response.status_code == 200:
-            print("Tools successfully received the combined json")
-            data = response.json()
-            print(data)
-            with open(output_path, 'wb') as f:
-                f.write(data['combindJsonContent'])
-        else:
-            print(f"Tools got receiving error: {response.status_code}")
-    except Exception as e:
-        print(f"Error receiving the combined json: {e}")
-'''
+        
 def check_combined_json(endpoint_url):
     while True:
         response = requests.get(endpoint_url)  # Repeat the GET request

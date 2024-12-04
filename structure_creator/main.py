@@ -276,11 +276,12 @@ def main():
         register_folder(data_group, user_data, sub_folder, data_path, role, type)
 
     # register license
+    license_file = None
     for file in user_data:
         if file['type'] == 'License':
             license_file = Path(file['filename'])
             break
-    if license_file:
+    if license_file is not None:
         licence_group = {}
         data['manifest:license'] = licence_group
         register_asset(licence_group, license_file, 'license', 'registeredUser', 'manifest:licenseData')

@@ -9,6 +9,6 @@
 	],
 	"params" : 	{
 		"call" : "jsonLD_validator/main.py",
-		"input" : {"" : "{path}/{sub_path}/domainMetadata.json"}
+		"input" : {"" : "{path}/{sub_path}/domainMetadata_updated.json"}
 	}
 }

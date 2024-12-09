@@ -167,9 +167,9 @@ def get_property_value(name, values):
 
 
 def get_data_from_metadata(path, meta_data):
-    if path in meta_data:           
-        #if check_data_type(meta_data[path], type_string_simple, name):
-            return meta_data[path]
+    if meta_data is not None:
+        if path in meta_data:           
+                return meta_data[path]
     return None
 
 
@@ -209,7 +209,7 @@ def get_schema_from_node_path(node_path: str):
 #    "@type": "georeference:Georeference",
 def create_group(as_list, group_name, node_path, parent_group, level, register=True):
 
-    if group_name == "hdmap:georeference":
+    if group_name == "georeference:geodeticReferenceSystem":
         found = True
     # create group
     if as_list:
@@ -270,69 +270,77 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
                 if is_required_property(properties):
                     name = convert_path_to_namespace(prop_node)
                     namespace, namespace_name = get_namespace(name)
-                    fill_properties_in_other_namespace(prop_node, namespace, meta_data, level)
+                    fill_properties_in_other_namespace(properties, prop_node, namespace, meta_data, level)
             continue
 
-        prop_type = getValue('datatype', properties, False)
-        if not prop_type:
+        if not create_property(properties, prefixes, meta_data, schema_name, group, prop_group, level):
             continue
 
-        # create property
-        data_type = None
-        isList_prop = is_list_property(properties)
-        if isList_prop:
-            property = list()           
-        else:
-            property = dict()
-            data_type = replace_namespace(prop_type, prefixes)
-            if data_type == "xsd:anyURI":
-                property = dict()                                         
-        prop_path = getValue('path', properties, False)
-        prop_path = replace_namespace(prop_path, prefixes)
 
-        if prop_path == 'hdmap:formatType':
-            test = 0
-        # set value
-        data_from_metadata = get_data_from_metadata(prop_path, meta_data)
-        if data_from_metadata is not None: # has data
-            if isList_prop:
-                for data_value in data_from_metadata:
-                    property.append(data_value)
-            elif type(property) == dict:
-                property['@value'] = data_from_metadata
-            else:
-                property = data_from_metadata
-        elif is_required_property(properties): # is required
-            data_value = check_value_type(dataTypeMap[data_type]['default'], data_type)
-            if isList_prop:
-                property.append(data_value)    
-            elif type(property) == dict:
-                property['@value'] = data_value
-            else:
-                property = data_value
-        elif is_in_namespace(prop_path, schema_name): # not filled -> ignore
-            #logging.warning(f'{prop_path} not found!!')
-            continue
-        else:
-            continue
-
-        sh_in = get_property_value('in', properties)
-        if data_type and not sh_in: # no type for enums!
-            property['@type'] = data_type
-        
-        # register
-        if isinstance(group, list):
-            logging.debug(f'{" "  * level * 3}add prop {prop_path}')
-            prop_group[prop_path] = property
-        else:
-            logging.debug(f'{" " * level * 3}add prop {prop_path}')
-            group[prop_path] = property
     
     if isinstance(group, list):
         group.append(prop_group)
 
+def create_property(properties, prefixes, meta_data, schema_name, group, prop_group, level):
+    # property type
+    prop_type = getValue('datatype', properties, False)
+    if not prop_type:
+        return False
 
-def fill_properties_in_other_namespace(node_path, schema_namespace, meta_data, level):
+    # create property and get data type
+    data_type = None
+    isList_prop = is_list_property(properties)
+    if isList_prop:
+        property = list()           
+    else:
+        property = dict()
+        data_type = replace_namespace(prop_type, prefixes)
+        if data_type == "xsd:anyURI":
+            property = dict()       
+
+    # prop_path
+    prop_path = getValue('path', properties, False)
+    prop_path = replace_namespace(prop_path, prefixes)        
+
+    # set value
+    data_from_metadata = get_data_from_metadata(prop_path, meta_data)
+    if data_from_metadata is not None: # has data
+        if isList_prop:
+            for data_value in data_from_metadata:
+                property.append(data_value)
+        elif type(property) == dict:
+            property['@value'] = data_from_metadata
+        else:
+            property = data_from_metadata
+    elif is_required_property(properties): # is required
+        data_value = check_value_type(dataTypeMap[data_type]['default'], data_type)
+        if isList_prop:
+            property.append(data_value)    
+        elif type(property) == dict:
+            property['@value'] = data_value
+        else:
+            property = data_value
+    elif is_in_namespace(prop_path, schema_name): # not filled -> ignore
+        #logging.warning(f'{prop_path} not found!!')
+        return False
+    else:
+        return False   
+    
+    sh_in = get_property_value('in', properties)
+    if data_type and not sh_in: # no type for enums!
+        property['@type'] = data_type    
+
+        # register
+    if isinstance(group, list):
+        logging.debug(f'{" "  * level * 3}add prop {prop_path}')
+        prop_group[prop_path] = property
+    else:
+        logging.debug(f'{" " * level * 3}add prop {prop_path}')
+        group[prop_path] = property    
+
+    return True 
+
+def fill_properties_in_other_namespace(node_properties, node_path, schema_namespace, meta_data, level):
     # then switch to specific shacle
     shacl_data = find_node_path_in_shacles(node_path)
     if shacl_data is None:
@@ -362,10 +370,36 @@ def fill_properties_in_other_namespace(node_path, schema_namespace, meta_data, l
                     if is_required_property(node_properties_add):
                         # create empty group
                         node = shacl_dict_add[node_path_add]
-                        as_list_add = is_list_property(node_properties_add)
-                        group = create_group(as_list_add, node_path_name, node_path_add, group_dict, level+1)
+                        create_required_subgraph(node_properties_add, node_path, node_path_name, group_dict, schema_namespace, shacl_dict_add, namespace, prefixes_add, level+1)
                     #return # not filled in meta_data - ignore
-        return # next node property from original shacl             
+        return # next node property from original shacl
+    else:   
+        if is_required_property(node_properties):                    
+            node_path_name = getValue('path', node_properties, False)
+            node_path_name = convert_path_to_namespace(node_path_name, True, schema_namespace)
+            group = create_required_subgraph(node_properties, node_path, node_path_name, config.JSON_OUT, schema_namespace, shacl_dict_add, namespace, prefixes_add, level)
+
+      
+def create_required_subgraph(node_properties, node_path, node_path_name, group_dict, schema_namespace, shacl_dict_sub, namespace_sub, prefixes_sub, level):      
+    as_list = is_list_property(node_properties)
+    node_path_name = getValue('path', node_properties, False)
+    node_path_name = convert_path_to_namespace(node_path_name, True, schema_namespace)
+    # add group
+    group = create_group(as_list, node_path_name, node_path, group_dict, level)  
+    # add subgraph
+    if node_path in shacl_dict_sub:
+        schema_shape_add = shacl_dict_sub[node_path]
+        for node_properties_add in schema_shape_add:
+            if is_required_property(node_properties_add):  
+                node_path_add = getValue('node', node_properties_add, False, True)
+                if node_path_add is None:
+                    create_property(node_properties_add, prefixes_sub, None, namespace_sub, group, group, level)
+                else:
+                    node_path_name_add = getValue('path', node_properties_add, False)
+                    node_path_name_add = convert_path_to_namespace(node_path_name_add, True, namespace_sub)
+                    create_required_subgraph(node_properties_add, node_path_add, node_path_name_add, group, namespace_sub, shacl_dict_sub, namespace_sub, prefixes_sub, level+1)
+    return group
+
 
 def fill_properties(meta_data, schema_namespace, schema_name):
     shacl_graph_data = config.SHACLS[schema_namespace]
@@ -388,7 +422,7 @@ def fill_properties(meta_data, schema_namespace, schema_name):
         # if node not in current shacle
         if node_path not in shacl_dict:
             # then switch to specific shacle
-            fill_properties_in_other_namespace(node_path, schema_namespace, meta_data, level)
+            fill_properties_in_other_namespace(node_properties, node_path, schema_namespace, meta_data, level)
             continue
         else: # is in current shacle -> get node 
             node = shacl_dict[node_path]
@@ -404,9 +438,7 @@ def fill_properties(meta_data, schema_namespace, schema_name):
             fill_content(node, node_path, node_path_name, schema_namespace, group, shacl_dict, prefixes, meta_data_sub, level+1)
         else:
             if is_required_property(node_properties):
-                # create empty group
-                as_list = is_list_property(node_properties)
-                group = create_group(as_list, node_path_name, node_path, config.JSON_OUT, level)
+                create_required_subgraph(node_properties, node_path, node_path_name, config.JSON_OUT, schema_namespace, shacl_dict, schema_namespace, prefixes, level)
 
 
 def get_prefix_for_uri(uri, graph):

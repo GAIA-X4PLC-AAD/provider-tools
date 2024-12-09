@@ -28,6 +28,6 @@ This repository contains all the tools of the data providers. These tools are mo
 ├── Readme.md
 ```
 
-![image](https://github.com/GAIA-X4PLC-AAD/provider-tools/tree/main/AssetExtractor_process.png)
+![AsssetExtractor process](AssetExtractor_process.png)
 
 

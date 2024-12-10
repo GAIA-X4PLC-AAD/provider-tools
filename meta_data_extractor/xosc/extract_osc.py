@@ -1145,6 +1145,18 @@ def fill_from_header_value(meta_data_dict: dict, meta_keyword: str, sc_header: e
     else:
         meta_data_dict[meta_keyword] = default_value
 
+def register_links(links_dic, dict_name, links):
+    if len(links):
+        links_data = list()
+        for link in links:
+            link_data = dict()
+            link_data['manifest:type'] = 'assetData'
+            link_data['manifest:path'] =  link
+            link_data['manifest:format'] =  'other'
+            link_data['manifest:accessRole'] =  'owner'
+            links_data.append(link_data)
+        links_dic[dict_name] = links_data
+
 
 def get_general_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, default_value: str = "Unknown", unknown_unit: str = "Unknown Unit") -> dict:
     sc_header = osc.scenario_et.find('.//FileHeader')
@@ -1175,30 +1187,39 @@ def get_general_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Pa
     #meta_data_dict['bounding'] = default_value
 
     ### links
+    if 'scenario:content' in meta_data_dict:
+        links_dic = meta_data_dict['scenario:content']
+    else:
+        links_dic = dict()
+        meta_data_dict['scenario:content'] = links_dic
+
+    # get catalog
     links = list()
-    road_network = osc.scenario_et.find('.//LogicFile')
-    if road_network is not None:
-        links.append(road_network.attrib['filepath'])
-    scene_graph_file = osc.scenario_et.find('.//SceneGraphFile')
-    if scene_graph_file is not None:
-        links.append(scene_graph_file.attrib['filepath'])
-    catalog_locatisons = osc.scenario_et.find('.//CatalogLocations')
-    if catalog_locatisons is not None:        
-        for catalog in catalog_locatisons:
+    catalog_locations = osc.scenario_et.find('.//CatalogLocations')
+    if catalog_locations is not None:        
+        for catalog in catalog_locations:
             path = str(catalog.find('Directory').attrib['path'])
             if len(path):
                 links.append(path)
-            
+    # register
+    register_links(links_dic, 'scenario:catalogs', links)
+    links.clear()
     
-    links_dic = dict()            
-    if len(links):
-        links_data = list()
-        for link in links:
-            link_data = dict()
-            link_data['general:type'] = 'Asset'
-            link_data['general:url'] =  link
-            links_data.append(link_data)
-        links_dic['general:data'] = links_data
+    # environment model
+    scene_graph_file = osc.scenario_et.find('.//SceneGraphFile')
+    if scene_graph_file is not None:
+        links.append(scene_graph_file.attrib['filepath'])
+    # register
+    register_links(links_dic, 'scenario:environmentModels', links)
+    links.clear()
+
+    # trafficSpace
+    road_network = osc.scenario_et.find('.//LogicFile')
+    if road_network is not None:
+        links.append(road_network.attrib['filepath'])
+    # register
+    register_links(links_dic, 'scenario:trafficSpace', links)
+    links.clear()
 
     ### licence
     if sc_header is not None:
@@ -1206,15 +1227,13 @@ def get_general_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Pa
         if license is not None:
             links_data = list()
             link_data = dict()
-            link_data['general:type'] = 'Document'
+            link_data['manifest:type'] = 'Document'
             #meta_data_dict['licence_type'] = license.attrib['name']
             if 'resource' in license.attrib:
-                link_data['general:url'] = license.attrib['resource']
+                link_data['manifest:url'] = license.attrib['resource']
             links_data.append(link_data)
-            links_dic['general:media'] = link_data
-    # not used yet -> should be defined in manifest file
-    #if len(links_dic):
-    #    general_dict['general:links'] = links_dic
+            # not used yet -> should be defined in manifest file
+            # links_dic['general:media'] = link_data
 
 
 def convert_env_to_string(env: etree._Element) -> str:
@@ -1262,41 +1281,15 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
             controllers.extend(catalog.findall('.//Controller'))    
             time_of_days.extend(catalog.findall('.//TimeOfDay'))
     
-    ### common data
-    common_dict = dict()
-    if not file_path.name.endswith('.xosc'): # OpenSCENARIO DSL
-        common_dict['scenario:abstractionLevel'] = 'Functional'
-    if osc.scenario_et.find('.//ParameterValueDistributionDefinition') is not None:
-        common_dict['scenario:abstractionLevel'] = 'Logical'
-    elif osc.scenario_et.find('.//ScenarioDefinition') is not None:
-        common_dict['scenario:abstractionLevel'] = 'Concrete'
-    #else: 
-    #    common_dict['scenario:abstractionLevel'] = default_value
-
-    time_date = default_value
-    if time_of_days is not None and len(time_of_days) > 0:
-        time_date = ''
-        separator = ', '
-        for time_of_day in time_of_days:
-            time_date += time_of_day.attrib['dateTime'] + separator
-        if time_date.endswith(separator):
-            time_date = time_date[:-len(separator)]
-        common_dict['scenario:timeDate'] = time_date
-    osc_tags = set()
-    for el in osc.scenario_et.findall('.//'):
-        osc_tags.add(el.tag)
-    common_dict['scenario:usedStandardFunctions'] = ', '.join(map(str, osc_tags))
-    #common_dict['scenario:aim'] = default_value    
-    meta_data_dict['scenario:common'] = common_dict
-
-    ### participants    
-    participants_dict = dict()
+    ### quantity 
+    # participants    
+    quantity_dict = dict()
     number_traffic_objects = 0
     number_traffic_objects += len(vehicles)
     number_traffic_objects += len(pedestrians)
     number_traffic_objects += len(misc_objects)
     number_traffic_objects += len(external_object_references)
-    participants_dict['scenario:numberTrafficObjects'] = str(number_traffic_objects)
+    quantity_dict['scenario:numberTrafficObjects'] = str(number_traffic_objects)
     #meta_data_dict['temporary_traffic_objects'] = default_value # TODO
     #meta_data_dict['permanent_traffic_objects'] = default_value # TODO
     traffic_participant_types = set()
@@ -1313,17 +1306,50 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
         else:
             controller_names.add(controller.attrib['name'])
     if controllers:            
-        participants_dict['scenario:controllers'] = ', '.join(map(str, controller_names))
+        quantity_dict['scenario:controllers'] = ', '.join(map(str, controller_names))
+
+    meta_data_dict['scenario:quantity'] = quantity_dict
+    
+    ##### content
+    if 'scenario:content' in meta_data_dict:
+        content_dict = meta_data_dict['scenario:content']
+    else:
+        content_dict = dict()
+        meta_data_dict['scenario:content'] = content_dict
+
     custom_commands = set()
     for user_defined_action in user_defined_actions:
         custom_commands.add(user_defined_action.attrib['type'])
     if len(custom_commands):
-        participants_dict['scenario:customCommands'] = ', '.join(map(str, custom_commands))
-    meta_data_dict['scenario:trafficParticipants'] = participants_dict
+        content_dict['scenario:customCommands'] = ', '.join(map(str, custom_commands))
 
-    ### environmental
+    ### common data
+    if not file_path.name.endswith('.xosc'): # OpenSCENARIO DSL
+        content_dict['scenario:abstractionLevel'] = 'Functional'
+    if osc.scenario_et.find('.//ParameterValueDistributionDefinition') is not None:
+        content_dict['scenario:abstractionLevel'] = 'Logical'
+    elif osc.scenario_et.find('.//ScenarioDefinition') is not None:
+        content_dict['scenario:abstractionLevel'] = 'Concrete'
+    #else: 
+    #    common_dict['scenario:abstractionLevel'] = default_value
+
+    time_date = default_value
+    if time_of_days is not None and len(time_of_days) > 0:
+        time_date = ''
+        separator = ', '
+        for time_of_day in time_of_days:
+            time_date += time_of_day.attrib['dateTime'] + separator
+        if time_date.endswith(separator):
+            time_date = time_date[:-len(separator)]
+        content_dict['scenario:timeDate'] = time_date
+    osc_tags = set()
+    for el in osc.scenario_et.findall('.//'):
+        osc_tags.add(el.tag)
+    content_dict['scenario:usedStandardFunctions'] = ', '.join(map(str, osc_tags))
+    #content_dict['scenario:aim'] = default_value      
+
+    # environmental
     if len(environ_actions) > 0:
-        environmental_dict = dict()
         separator = ', '
         environment_conditions = set()
         sun_elevation = set()
@@ -1342,12 +1368,10 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
                     wetness.add(precipitation.attrib['precipitationType'])
         #meta_data_dict['environment_conditions'] = ', '.join(map(str, environment_conditions))
         #meta_data_dict['sun_elevation'] = ', '.join(map(str, sun_elevation))
-        environmental_dict['scenario:sunAzimuth'] = ', '.join(map(str, sun_azimuth))
+        content_dict['scenario:sunAzimuth'] = ', '.join(map(str, sun_azimuth))
         #meta_data_dict['wetness'] = ', '.join(map(str, wetness))
-        meta_data_dict['scenario:environmental'] = environmental_dict
 
-    ### traffic
-    traffic_dict = dict()
+    # traffic
     country_specific_sign = set()
     if osc.map_et is not None:
         roads = osc.map_et.findall('.//road')
@@ -1366,38 +1390,10 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
     for misc_object in misc_objects:
         country_specific_tp.add(misc_object.attrib['name'])
     if len(country_specific_tp):
-        traffic_dict['scenario:countrySpecificTP'] = ', '.join(map(str, country_specific_tp))
+        content_dict['scenario:countrySpecificTrafficParticipants'] = ', '.join(map(str, country_specific_tp))
 
     if len(country_specific_sign):
-        traffic_dict['scenario:countrySpecificSign'] = ', '.join(map(str, country_specific_sign))
-    meta_data_dict['scenario:traffic'] = traffic_dict
-
-    ### structural
-    structural_dict = dict()
-    catalogs = []
-    catalog_locatisons = osc.scenario_et.find('.//CatalogLocations')
-    if catalog_locatisons is not None:        
-        for catalog in catalog_locatisons:
-            catalogs.append(str(catalog.find('Directory').attrib['path']))
-
-    links_dic = dict()            
-    if len(catalogs):
-        links_data = list()
-        for link in catalogs:
-            link_data = dict()
-            link_data['general:type'] = 'Document'
-            link_data['general:url'] =  link
-            links_data.append(link_data)
-        links_dic['general:data'] = links_data        
-    structural_dict['scenario:catalogs'] = links_dic
-    road_network = osc.scenario_et.find('.//LogicFile')
-    if road_network is not None:
-        structural_dict['scenario:trafficSpace'] = road_network.attrib['filepath']
-
-    scene_graph_file = osc.scenario_et.find('.//SceneGraphFile')
-    if scene_graph_file is not None:
-        structural_dict['scenario:3dModels'] = scene_graph_file.attrib['filepath']
-    meta_data_dict['scenario:structural'] = structural_dict
+        content_dict['scenario:countrySpecificSign'] = ', '.join(map(str, country_specific_sign))
 
     ### Data_Sources
     #meta_data_dict['data_source'] = default_value

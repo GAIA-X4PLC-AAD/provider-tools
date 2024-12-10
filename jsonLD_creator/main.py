@@ -209,8 +209,6 @@ def get_schema_from_node_path(node_path: str):
 #    "@type": "georeference:Georeference",
 def create_group(as_list, group_name, node_path, parent_group, level, register=True):
 
-    if group_name == "georeference:geodeticReferenceSystem":
-        found = True
     # create group
     if as_list:
         group = list()
@@ -251,7 +249,7 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
                 continue
             namespace_add, shacl_dict_add, prefixes_add = shacl_data
             if prop_node in shacl_dict_add:
-                node = shacl_dict[prop_node]
+                node = shacl_dict_add[prop_node]
                 node_path_name = getValue('path', properties, False)
                 node_path_name = convert_path_to_namespace(node_path_name, False, schema_name)
                 isList_sub = is_list_property(properties)
@@ -398,6 +396,14 @@ def create_required_subgraph(node_properties, node_path, node_path_name, group_d
                     node_path_name_add = getValue('path', node_properties_add, False)
                     node_path_name_add = convert_path_to_namespace(node_path_name_add, True, namespace_sub)
                     create_required_subgraph(node_properties_add, node_path_add, node_path_name_add, group, namespace_sub, shacl_dict_sub, namespace_sub, prefixes_sub, level+1)
+
+    # hack for georeference:GeodeticReferenceSystemShape to add sh:or georeference:coordinateSystemName   
+    if node_path_name == "georeference:geodeticReferenceSystem":
+        if 'georeference:coordinateSystemName' not in group:
+            property = dict()
+            property['@type'] = 'xsd:string'   
+            property['@value'] = ''
+            group['georeference:coordinateSystemName'] = property                
     return group
 
 

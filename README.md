@@ -3,7 +3,10 @@ Map and Scenario Data
 
 ## Description
 This repository contains all the tools of the data providers. These tools are mostly called up in https://github.com/GAIA-X4PLC-AAD/provider-services/tree/main/asset_extractor in the Docker as a pipeline to automatically generate an asset.zip from an asset.
-
+Most of the tools of Asset Extractor supports the following formats:
+- ASAM OpenDRIVE
+- ASAM OpenSCENARI XML
+- 3D Envirenment model (with metadata json input from Trian3DBuilder)
 
 ### Content
 

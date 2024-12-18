@@ -60,18 +60,13 @@ def main():
     # call sd wizrad in docker composed
     trigger_open_sd_wizard('http://127.0.0.1:3000/openSdWizard')
 
-    # TODO - use jsonLD_file, shacl_file
+    # use jsonLD_file, shacl_file
     output_path = Path(args.out) 
     post_filepath(str(jsonLD_file), 'http://127.0.0.1:3000/processJsonLDFile', str(output_path))
     post_filepath(str(shacl_file), 'http://127.0.0.1:3000/processShaclFile')
-    # get enhanced jsonLD file from docker 
-    # TODO get enhanced jsonLD file
+    # get enhanced jsonLD file
     # copy to target file location
-    #output_path = Path(args.out)  
     check_combined_json('http://127.0.0.1:3000/processCombinedJsonFile')
-   
-    # TODO copy to target location
-
 
 if __name__ == '__main__':
     main()

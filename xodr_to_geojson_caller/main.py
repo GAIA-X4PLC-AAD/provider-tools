@@ -40,7 +40,7 @@ def main():
     script_call = []
     script_call.append('java')
     script_call.append('-jar')
-    script_call.append('/app/python/tools/xodr_to_geojson_caller/vcs-odr-converter-1.0.0.jar')
+    script_call.append('/app/java/vcs-odr-converter-1.0.0.jar')
     script_call.append(new_temp_file.as_posix())
     script_call.append(filename_out.parent.as_posix())
     print(script_call)

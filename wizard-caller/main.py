@@ -58,7 +58,7 @@ def main():
         exit(1)
 
     # call sd wizrad in docker composed
-    trigger_open_sd_wizard('http://127.0.0.1:3000/openSdWizard')
+    trigger_open_sd_wizard('http://localhost:3000/openSdWizard')
 
     # use jsonLD_file, shacl_file
     output_path = Path(args.out) 

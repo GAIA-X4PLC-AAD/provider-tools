@@ -4,6 +4,7 @@ import argparse
 import json
 import shutil
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
@@ -44,7 +45,7 @@ type_data = {
     },
     'Document' : {
         'folder' : 'documentation',
-        'mask' : '{asset}_technicalDocumentation'
+        'mask' : '{asset}_{file}'
     }, 
     'License' : {
         'folder' : '../',
@@ -168,26 +169,34 @@ def register_folder(data: dict, user_data: dict, path: Path, data_path: Path, ro
         else:
             data[category] = files
 
-
-def createFileName(filename: Path, asset_name: Path, type : str, index : int) -> Path:
-    basename = str(filename.stem)  # Name without extension
+def getMask(filename: Path, type : str, index : int) -> Path:
     if type in type_data:
         mask = type_data[type]['mask']
     else:
         logging.error(f'type {type} not found in type_data')
         exit(1)
-    basename = mask.replace(r"{file}", basename)
-    basename = mask.replace(r"{asset}", asset_name)
-    extension = filename.suffix
 
     if type == 'Image':
-        if index == 0:
-            filename_new = f"{basename}_eyecatcher{extension}"
-        else:
-            number = str(index).zfill(2)
-            filename_new = f"{basename}_impression-{number}{extension}"
-    else:
-        filename_new = f"{basename}{extension}"
+        mask = mask + '_impression-{number}'
+    elif type == 'Document' and filename.suffix == '.pdf' and not filename.stem.endswith("_Documentation"):
+        mask = mask + '_Documentation'
+    return mask
+
+def createFileName(filename: Path, asset_name: Path, type : str, index : int) -> Path:
+    basename = str(filename.stem)  # Name without extension
+
+    mask = getMask(filename, type, index)
+
+    if "{asset}" in mask and "{file}" in mask:
+        common_prefix  = os.path.commonprefix([basename, asset_name])
+        basename = basename[len(common_prefix):]
+    mask = mask.replace(r"{asset}", asset_name)
+    mask = mask.replace(r"{file}", basename)
+    
+    basename = mask.replace(r"{number}", str(index).zfill(2))
+    extension = filename.suffix
+
+    filename_new = f"{basename}{extension}"
     return Path(filename_new)
 
 
@@ -232,7 +241,7 @@ def main():
 
     # copy files
     upload_folder = user_input_file.parent
-    indexImage = 0
+    indexImage = 1
     for file in user_data:
         filename = Path(file['filename'])
         # get sub folder
@@ -285,10 +294,6 @@ def main():
         licence_group = {}
         data['manifest:license'] = licence_group
         register_asset(licence_group, license_file, 'license', 'registeredUser', 'manifest:licenseData')
-
-    # add asset zip
-    #asset_file = Path('asset.zip')
-    #register_asset(data_group, asset_file, 'assetData', 'owner', 'manifest:asset')     
 
     # write metadata json 
     path = filename_out.parent

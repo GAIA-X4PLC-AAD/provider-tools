@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
 import argparse
 import json
@@ -32,6 +33,21 @@ category_to_type = {
    'AssetData' : 'assetData',
    'Asset' : 'assetData',
    'MetaData' : 'metadata',
+}
+
+asset_type = {
+    'xodr' : {
+        'type' : 'HD-Map',
+        'link' : 'hd-map-asset-example'
+    },
+    'xosc' : {
+        'type' : 'Scenario',
+        'link' : 'scenario-asset-example'
+    },
+    'xosc' : {
+        'type' : 'environment-model',
+        'link' : 'environment-model-asset-example'
+    }
 }
 
 type_data = {
@@ -107,9 +123,13 @@ def get_file_type(filename: Path):
 def create_file_data(filename: Path, data_type: str, role: str, category: str):
     file_data = {}
     file_data['manifest:accessRole'] = role
-    file_data['manifest:path'] = filename.as_posix()
+    if is_url(str(filename)):
+        file_data['manifest:path'] = filename
+        file_data['manifest:format'] = 'html'
+    else:
+        file_data['manifest:path'] = filename.as_posix()        
+        file_data['manifest:format'] = get_file_type(filename)
     file_data['manifest:type'] = data_type
-    file_data['manifest:format'] = get_file_type(filename)
     return file_data
 
 
@@ -199,6 +219,25 @@ def createFileName(filename: Path, asset_name: Path, type : str, index : int) ->
     filename_new = f"{basename}{extension}"
     return Path(filename_new)
 
+def create_readme(asset_name: Path, asset_typ: str, asset_link: str, filename: Path):
+    template = """# {asset_name}
+This example serves as a reference for onboarding an {asset_typ} asset into the data space of ENVITED and can be used as a template for other dataspaces as well. 
+It contains a fully described and consistent example of an {asset_typ} asset and an **`manifest.json` - file**.
+A complete **`asset`** in a specific domain includes the data itself and all necessary files for describing, evaluating, and visualizing the dataset. 
+The **`asset`** has a specific following folder structure and the sample can be downloaded here in this repo from the lastest release (**`asset.zip`**).
+
+# FAQ: 
+Get all information [here](https://github.com/GAIA-X4PLC-AAD/{asset_link})
+"""
+
+    readme_content = template.format(asset_name=asset_name, asset_typ=asset_typ, asset_link=asset_link)
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(readme_content)
+
+def is_url(string):
+    parsed = urlparse(string)
+    # A URL usually has a scheme (e.g. “http”, “https”) and a “netloc” (e.g. “www.example.com”)
+    return all([parsed.scheme, parsed.netloc])
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='the folder structure is completed from the user info and a metadata table is created for the manifest')   
@@ -229,10 +268,12 @@ def main():
 
     # initialize asset_name
     asset_name = None
+    asset_extension = None
     # get asset name from Data entry
     for file in user_data:
         if file['type'] == 'AssetData':
-            asset_name = Path(file['filename'])
+            asset_name = Path(file['filename'])            
+            asset_extension = asset_name.suffix.lstrip('.')
             asset_name = asset_name.stem
             break
     if not asset_name:
@@ -285,20 +326,33 @@ def main():
         register_folder(data_group, user_data, sub_folder, data_path, role, type)
 
     # register license
-    license_file = None
-    for file in user_data:
-        if file['type'] == 'License':
-            license_file = Path(file['filename'])
-            break
+    # TODO get license from file or userinput link/type
+    license_file = 'https://www.mozilla.org/en-US/MPL/2.0/'
+    #for file in user_data:
+    #    if file['type'] == 'License':
+    #        license_file = Path(file['filename'])
+    #        break
     if license_file is not None:
         licence_group = {}
+        licence_group['manifest:spdxIdentifier'] = 'MPL-2.0'
+        
         data['manifest:license'] = licence_group
-        register_asset(licence_group, license_file, 'license', 'registeredUser', 'manifest:licenseData')
+        register_asset(licence_group, license_file, 'license', 'publicUser', 'manifest:licenseData')
+        
 
-    # write metadata json 
-    path = filename_out.parent
+
+    path = filename_out.parent    
     if not path.exists():
         path.mkdir()
+
+    # create readme
+    if asset_extension in asset_type:
+        asset_typ = asset_type[asset_extension]['type']
+        asset_link = asset_type[asset_extension]['link']
+        readme_filename = data_path / Path('README.md')
+        create_readme(asset_name, asset_typ, asset_link, readme_filename)
+
+    # write metadata json 
     with open(filename_out, 'w') as f:
         json.dump(data, f, indent=4)
 

@@ -5,6 +5,8 @@ import subprocess
 import argparse
 import shutil
 import logging
+import os
+import sys
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
@@ -90,8 +92,20 @@ def main():
         logging.error(f"Error output: {e.stdout}")
         exit(1)
 
-    # call openMSL opendrive
-    # TODO
+    # write als txt
+    os.chdir(output_file.parent) # change system path
+    script_call = []
+    script_path = Path(__file__).resolve()
+    if sys.platform.startswith("win"):
+        appname = Path('TextReport.exe')
+    elif sys.platform.startswith("linux"):
+        appname = Path('TextReport')
+    else:
+        print(f"unknown system: {sys.platform}")
+    script_call.append(f'{script_path.parent}\\apps\\{appname}') # call Textreport
+    script_call.append(f'{output_file}')
+    result = subprocess.run(script_call, check=True, capture_output=True, text=True)
+    os.rename(f"{output_file.parent}\\Report.txt", f"{output_file.with_suffix('')}_QCReport.txt")
 
 
 if __name__ == "__main__":

@@ -62,11 +62,11 @@ def main():
 
     # use jsonLD_file, shacl_file
     output_path = Path(args.out) 
-    post_filepath(str(jsonLD_file), 'http://127.0.0.1:3000/processJsonLDFile', str(output_path))
-    post_filepath(str(shacl_file), 'http://127.0.0.1:3000/processShaclFile')
+    post_filepath(str(jsonLD_file), 'http://localhost:3000/processJsonLDFile', str(output_path))
+    post_filepath(str(shacl_file), 'http://localhost:3000/processShaclFile')
     # get enhanced jsonLD file
     # copy to target file location
-    check_combined_json('http://127.0.0.1:3000/processCombinedJsonFile')
+    check_combined_json('http://localhost:3000/processCombinedJsonFile')
 
 if __name__ == '__main__':
     main()

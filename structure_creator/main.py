@@ -120,22 +120,28 @@ def get_file_type(filename: Path):
     else:
         return "other"
 
-def create_file_data(filename: Path, data_type: str, role: str, category: str):
+def create_file_data(filename: Path, data_path: Path, data_type: str, role: str, category: str):
     file_data = {}
     file_data['manifest:accessRole'] = role
-    if is_url(str(filename)):
-        file_data['manifest:path'] = filename
-        file_data['manifest:format'] = 'html'
-    else:
-        file_data['manifest:path'] = filename.as_posix()        
-        file_data['manifest:format'] = get_file_type(filename)
     file_data['manifest:type'] = data_type
+    file_meta_data = dict()
+    file_data['manifest:fileMetaData'] =  file_meta_data
+    file_is_url = is_url(str(filename))
+    if file_is_url:
+        file_meta_data['manifest:uri'] = filename           
+    else:        
+        relative_path = filename.relative_to(data_path)
+        file_meta_data['manifest:uri'] = relative_path.as_posix()    
+        file_meta_data['manifest:filename'] = os.path.basename(relative_path.as_posix())
+        if os.path.exists(filename):
+            file_meta_data['manifest:fileSize'] =  os.path.getsize(filename.as_posix())           
+    
     return file_data
 
 
-def register_asset(data: dict, filename: Path, data_type: str, role: str, category: str):
+def register_asset(data: dict, filename: Path, data_path: Path, data_type: str, role: str, category: str):
     files = []   
-    files.append(create_file_data(filename, data_type, role, category))
+    files.append(create_file_data(filename, data_path, data_type, role, category))
     
     if category in data:
         data[category].extend(files)
@@ -177,11 +183,10 @@ def register_folder(data: dict, user_data: dict, path: Path, data_path: Path, ro
         if file_type == 'Service':
             role = 'publicUser'
         data_type = get_data_type(file_type)
-        relative_path = filename.relative_to(data_path)
         if filename.suffix.lstrip('.') == 'bjson':
-            handle_bjson(relative_path, data_type, role, data)
+            handle_bjson(filename.relative_to(data_path), data_type, role, data)
             continue
-        files.append(create_file_data(relative_path, data_type, role, category))
+        files.append(create_file_data(filename, data_path, data_type, role, category))
 
     if len(files):
         if category in data:
@@ -337,7 +342,7 @@ def main():
         licence_group['manifest:spdxIdentifier'] = 'MPL-2.0'
         
         data['manifest:license'] = licence_group
-        register_asset(licence_group, license_file, 'license', 'publicUser', 'manifest:licenseData')
+        register_asset(licence_group, license_file, data_path, 'license', 'publicUser', 'manifest:licenseData')
         
 
 

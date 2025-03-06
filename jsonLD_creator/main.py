@@ -220,7 +220,10 @@ def create_group(as_list, group_name, node_path, parent_group, level, register=T
         logging.debug(f'{" " * level * 3}add dict {group_name}')  
 
     if register:
-        parent_group[group_name] = group
+        if isinstance(parent_group, list):
+            parent_group.append(group)
+        else:
+            parent_group[group_name] = group
     return group
 
 
@@ -257,10 +260,15 @@ def fill_content(node, node_path, node_path_name, schema_name, group, shacl_dict
                     continue
                 # create sub group and fill sub content
                 meta_data_sub = meta_data[node_path_name]
-                group_sub = create_group(isList_sub, node_path_name, prop_node, group, level)
+                group_to_add = group
+                if isinstance(group_to_add, list):
+                    group_to_add = prop_group
+                group_sub = create_group(isList_sub, node_path_name, prop_node, group_to_add, level)
                 if isinstance(meta_data_sub, list):                    
                     for meta_sub_element in meta_data_sub:
-                        fill_content(node, prop_node, node_path_name, schema_name, group_sub, shacl_dict, prefixes, meta_sub_element, level+1)
+                        name = convert_path_to_namespace(prop_node)
+                        namespace, namespace_name = get_namespace(name)
+                        fill_content(node, prop_node, node_path_name, namespace, group_sub, shacl_dict, prefixes, meta_sub_element, level+1)
                 else:
                     fill_content(node, prop_node, node_path_name, schema_name, group_sub, shacl_dict, prefixes, meta_data_sub, level+1)
 

@@ -10,6 +10,7 @@ import logging
 import typing
 import json
 import uuid
+import os
 
 
 logging.basicConfig(level=logging.DEBUG,
@@ -358,23 +359,25 @@ def load_openscenario_file(osc_path: Path) -> OpenSCENARIO:
         osc_path.parent / filepath).resolve()
     logging.debug(f'Loading map {osc.map_location}')
     if not osc.map_location.exists():
+        logging.error(f'map not exist {osc.map_location}')
         exit(1)
-    for catalog in sc.find('.//CatalogLocations'):
-        if 'path' not in catalog.find('.//Directory').attrib or catalog.find('.//Directory').attrib['path'] == '':
-            continue
-        location = (osc_path.parent /
-                    catalog.find('.//Directory').attrib['path']).resolve()
-        osc.catalogs[catalog.tag] = []
-        osc.catalog_locations[catalog.tag] = []
-        if location.is_dir():
-            for file in location.iterdir():
-                if file.name.endswith('osc') or file.name.endswith('xosc'):
-                    logging.debug(f'Loading catalog {file}')
-                    osc.catalogs[catalog.tag].append(ET.parse(file).getroot())
-                    osc.catalog_locations[catalog.tag].append(file)
-        elif location.is_file():
-            logging.debug(f'Loading catalog {location}')
-            osc.catalogs[catalog.tag].append(ET.parse(location).getroot())
+    if './/CatalogLocations' in sc:
+        for catalog in sc.find('.//CatalogLocations'):
+            if 'path' not in catalog.find('.//Directory').attrib or catalog.find('.//Directory').attrib['path'] == '':
+                continue
+            location = (osc_path.parent /
+                        catalog.find('.//Directory').attrib['path']).resolve()
+            osc.catalogs[catalog.tag] = []
+            osc.catalog_locations[catalog.tag] = []
+            if location.is_dir():
+                for file in location.iterdir():
+                    if file.name.endswith('osc') or file.name.endswith('xosc'):
+                        logging.debug(f'Loading catalog {file}')
+                        osc.catalogs[catalog.tag].append(ET.parse(file).getroot())
+                        osc.catalog_locations[catalog.tag].append(file)
+            elif location.is_file():
+                logging.debug(f'Loading catalog {location}')
+                osc.catalogs[catalog.tag].append(ET.parse(location).getroot())
     return osc
 
 
@@ -1149,11 +1152,15 @@ def register_links(links_dic, dict_name, links):
     if len(links):
         links_data = list()
         for link in links:
-            link_data = dict()
-            link_data['manifest:type'] = 'assetData'
-            link_data['manifest:path'] =  link
-            link_data['manifest:format'] =  'other'
+            link_data = dict()            
             link_data['manifest:accessRole'] =  'owner'
+            link_data['manifest:type'] = 'assetData'
+            file_meta_data = dict()
+            link_data['manifest:fileMetaData'] =  file_meta_data
+            file_meta_data['manifest:uri'] =  link
+            file_meta_data['manifest:filename'] =  os.path.basename(link)
+            if os.path.exists(link):
+                file_meta_data['manifest:fileSize'] =  os.path.getsize(link)
             links_data.append(link_data)
         links_dic[dict_name] = links_data
 
@@ -1198,7 +1205,7 @@ def get_general_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Pa
     catalog_locations = osc.scenario_et.find('.//CatalogLocations')
     if catalog_locations is not None:        
         for catalog in catalog_locations:
-            path = str(catalog.find('Directory').attrib['path'])
+            path = catalog.find('Directory').attrib['path']
             if len(path):
                 links.append(path)
     # register

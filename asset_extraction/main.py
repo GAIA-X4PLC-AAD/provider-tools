@@ -158,6 +158,10 @@ def main():
 
     # Create, cleanup output directory for the asset file
     asset_name = asset_file.stem
+    if '.' in asset_name:
+        logging.error(f"File {asset_name} has points in name! Not supported!")
+        exit(1)
+
     output_dir = Path(args.out)
     output_dir = output_dir.resolve()    
     output_sub_dir = output_dir / asset_name

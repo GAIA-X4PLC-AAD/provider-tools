@@ -406,7 +406,7 @@ def main():
 
     # create readme
     url = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/manifest/README.md"
-    script_path = Path(sys.argv[0]).resolve()
+    script_path = Path(__file__).resolve()
     readme_template = script_path.parent / 'README_template.md'
     download_readme(url, readme_template)
     if asset_extension in asset_type:

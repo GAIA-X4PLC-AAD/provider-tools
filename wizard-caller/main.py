@@ -4,6 +4,10 @@ import time
 import logging
 import argparse
 import requests
+import shutil
+import os
+
+DEBUG = False
 
 def trigger_open_sd_wizard(endpoint_url):
     try:
@@ -28,6 +32,9 @@ def post_filepath(file_path, endpoint_url, output_path = None):
         print(f"Error sending file path: {e}")
         
 def check_combined_json(endpoint_url):
+    if DEBUG:
+        return
+
     while True:
         response = requests.get(endpoint_url)  # Repeat the GET request
         if response.status_code == 204:
@@ -56,6 +63,13 @@ def main():
     if not shacl_file.exists():
         logging.error(f'shacl file not exist {shacl_file}')
         exit(1)
+
+    if DEBUG:
+        base, ext = os.path.splitext(jsonLD_file)
+        # "_updated" zum Dateinamen hinzufügen
+        destination_path = f"{base}_updated{ext}"
+        shutil.copyfile(jsonLD_file, destination_path)
+        return
 
     # call sd wizrad in docker composed
     trigger_open_sd_wizard('http://localhost:3000/openSdWizard')

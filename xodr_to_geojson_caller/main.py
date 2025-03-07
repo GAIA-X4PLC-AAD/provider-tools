@@ -5,6 +5,8 @@ import argparse
 import subprocess
 import logging
 
+DEBUG = False
+
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 def main():
@@ -40,7 +42,11 @@ def main():
     script_call = []
     script_call.append('java')
     script_call.append('-jar')
-    script_call.append('/app/java/vcs-odr-converter-1.0.0.jar')
+    if DEBUG:
+        script_call.append('E:/Data/Customer/GaiaX/GIT/provider-tools/asset_extraction/vcs-odr-converter-1.0.0.jar')
+    else:
+        script_call.append('/app/java/vcs-odr-converter-1.0.0.jar')
+
     script_call.append(new_temp_file.as_posix())
     script_call.append(filename_out.parent.as_posix())
     print(script_call)

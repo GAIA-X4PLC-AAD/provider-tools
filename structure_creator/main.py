@@ -6,6 +6,7 @@ import json
 import shutil
 import logging
 import os
+import requests
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
@@ -38,14 +39,17 @@ category_to_type = {
 asset_type = {
     'xodr' : {
         'type' : 'HD-Map',
+        'classname' : 'hdmap',
         'link' : 'hd-map-asset-example'
     },
     'xosc' : {
         'type' : 'Scenario',
+        'classname' : 'scenario',
         'link' : 'scenario-asset-example'
     },
-    'xosc' : {
+    'zip' : {
         'type' : 'environment-model',
+        'classname' : 'environment-model',
         'link' : 'environment-model-asset-example'
     }
 }
@@ -120,7 +124,7 @@ def get_file_type(filename: Path):
     else:
         return "other"
 
-def create_file_data(filename: Path, data_path: Path, data_type: str, role: str, category: str):
+def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: str):
     file_data = {}
     file_data['manifest:accessRole'] = role
     file_data['manifest:type'] = data_type
@@ -130,7 +134,7 @@ def create_file_data(filename: Path, data_path: Path, data_type: str, role: str,
     if file_is_url:
         file_meta_data['manifest:uri'] = filename           
     else:        
-        relative_path = filename.relative_to(data_path)
+        relative_path = filename.relative_to(abs_data_path)
         file_meta_data['manifest:uri'] = relative_path.as_posix()    
         file_meta_data['manifest:filename'] = os.path.basename(relative_path.as_posix())
         if os.path.exists(filename):
@@ -139,9 +143,9 @@ def create_file_data(filename: Path, data_path: Path, data_type: str, role: str,
     return file_data
 
 
-def register_asset(data: dict, filename: Path, data_path: Path, data_type: str, role: str, category: str):
+def register_asset(data: dict, filename: Path, abs_data_path: Path, data_type: str, role: str, category: str):
     files = []   
-    files.append(create_file_data(filename, data_path, data_type, role, category))
+    files.append(create_file_data(filename, abs_data_path, data_type, role))
     
     if category in data:
         data[category].extend(files)
@@ -155,10 +159,9 @@ def get_data_type(file_type:str):
         return 'other'
 
 
-def handle_bjson(relative_path, data_type, role, data):
+def handle_bjson(filename, abs_data_path, data_type, role, data, category):
     files = []
-    category = 'manifest:contentData'
-    files.append(create_file_data(relative_path, data_type, role, category))
+    files.append(create_file_data(filename, abs_data_path, data_type, role))
 
     if category in data:
         data[category].extend(files)
@@ -166,7 +169,7 @@ def handle_bjson(relative_path, data_type, role, data):
         data[category] = files
 
 
-def register_folder(data: dict, user_data: dict, path: Path, data_path: Path, role: str, category: str):
+def register_folder(data: dict, user_data: dict, path: Path, abs_data_path: Path, role: str, category: str):
     if not path.exists():
         return
     
@@ -184,9 +187,9 @@ def register_folder(data: dict, user_data: dict, path: Path, data_path: Path, ro
             role = 'publicUser'
         data_type = get_data_type(file_type)
         if filename.suffix.lstrip('.') == 'bjson':
-            handle_bjson(filename.relative_to(data_path), data_type, role, data)
+            handle_bjson(filename, abs_data_path, data_type, role, data, category)
             continue
-        files.append(create_file_data(filename, data_path, data_type, role, category))
+        files.append(create_file_data(filename, abs_data_path, data_type, role))
 
     if len(files):
         if category in data:
@@ -243,6 +246,61 @@ def is_url(string):
     parsed = urlparse(string)
     # A URL usually has a scheme (e.g. “http”, “https”) and a “netloc” (e.g. “www.example.com”)
     return all([parsed.scheme, parsed.netloc])
+
+
+def update_readme(file_path_in: Path, file_path_out: Path, name_value: str, description_value: str) -> None:
+    # Read the entire content of the file using UTF-8 encoding
+    content = file_path_in.read_text(encoding="utf-8")
+    
+    # Replace the placeholders with the given values
+    content = content.replace("< general:description:name >", name_value)
+    content = content.replace("< general:description:description >", description_value)
+    
+    # Write the updated content back to the file using UTF-8 encoding
+    file_path_out.write_text(content, encoding="utf-8")
+
+
+def download_readme(readme_url : str, filename_target : str) -> str:
+    # get file from github
+    response = requests.get(readme_url)
+    if response.status_code == 200:
+        content = response.text
+        with open(filename_target, "w", encoding="utf-8") as file:
+            file.write(content)
+    else:
+        logging.error(f'No readme files found in url: {readme_url}')
+        exit(1)
+
+def safe_get(d, keys, default=None):
+    """
+    Helper function to safely retrieve nested keys from a dictionary.
+    
+    :param d: The dictionary to extract the value from.
+    :param keys: A list of keys representing the path to the desired value.
+    :param default: The value to return if a key in the path does not exist.
+    :return: The value found at the end of the key path, or default if any key is missing.
+    """
+    for key in keys:
+        try:
+            d = d[key]
+        except (KeyError, TypeError):
+            return default
+    return d
+
+
+def get_name_description_from_domainMetadata(filename, type):
+    with open(filename, "r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    name = safe_get(data, [f"{type}:general", "general:description", "general:name", "@value"])
+    if not name:
+        logging.error(f'name : {name}:general not exists in {filename}')
+    description = safe_get(data, [f"{type}:general", "general:description", "general:description", "@value"])
+    if not description:
+        logging.error(f'description: {name}:general not exists in {filename}')
+
+    return name, description
+
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='the folder structure is completed from the user info and a metadata table is created for the manifest')   
@@ -333,10 +391,6 @@ def main():
     # register license
     # TODO get license from file or userinput link/type
     license_file = 'https://www.mozilla.org/en-US/MPL/2.0/'
-    #for file in user_data:
-    #    if file['type'] == 'License':
-    #        license_file = Path(file['filename'])
-    #        break
     if license_file is not None:
         licence_group = {}
         licence_group['manifest:spdxIdentifier'] = 'MPL-2.0'
@@ -351,11 +405,17 @@ def main():
         path.mkdir()
 
     # create readme
+    url = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/manifest/README.md"
+    script_path = Path(sys.argv[0]).resolve()
+    readme_template = script_path.parent / 'README_template.md'
+    download_readme(url, readme_template)
     if asset_extension in asset_type:
-        asset_typ = asset_type[asset_extension]['type']
-        asset_link = asset_type[asset_extension]['link']
-        readme_filename = data_path / Path('README.md')
-        create_readme(asset_name, asset_typ, asset_link, readme_filename)
+        # get name + description from domainMetadata.json
+        domainMetadata = filename_out.parent.parent / 'metadata/domainMetadata.json'
+        name, description = get_name_description_from_domainMetadata(domainMetadata, asset_type[asset_extension]['classname'].lower())
+        if name and description:
+            readme_file = filename_out.parent.parent / 'README.md'
+            update_readme(readme_template, readme_file, name, description)
 
     # write metadata json 
     with open(filename_out, 'w') as f:

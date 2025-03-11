@@ -104,15 +104,17 @@ def main():
         print(f"unknown system: {sys.platform}")
     text_report_path = script_path.parent / 'apps' / appname
     script_call.append (text_report_path) # call Textreport
-    script_call.append(f'{output_file}')
+    script_call.append(output_file)
 
+    logging.info(script_call)
     try:
+        logging.info(f"Start Converting xqar to human readable form :")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        logging.info(f"Converting xqar to human readable form succeeded with output:")
+        logging.info(f"Succeeded with output:")
         logging.info(result.stdout)  # print default output from sub process
         logging.info(result.stderr)  # print logging output from sub process
     except subprocess.CalledProcessError as e:
-        logging.error(f"Converting xqar to human readable form failed with return code {e.returncode}")
+        logging.error(f"Failed with return code {e.returncode}")
         logging.error(f"Error output: {e.stderr}")
         logging.error(f"Error output: {e.stdout}")
     exit(1)

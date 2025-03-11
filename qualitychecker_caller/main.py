@@ -125,9 +125,9 @@ def main():
         logging.info(result.stdout)  # print default output from sub process
         logging.info(result.stderr)  # print logging output from sub process
     except subprocess.CalledProcessError as e:
-        logging.error(f"Failed with return code {e.returncode}")
-        logging.error(f"Error output: {e.stderr}")
-        logging.error(f"Error output: {e.stdout}")
+        logging.error(f" bla bla Failed with return code {e.returncode}")
+        logging.error(f"bla bla Error output: {e.stderr}")
+        logging.error(f"bla bla Error output: {e.stdout}")
     exit(1)
 
 

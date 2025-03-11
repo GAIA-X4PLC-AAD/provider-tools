@@ -102,10 +102,14 @@ def main():
         appname = Path('TextReport')
     else:
         print(f"unknown system: {sys.platform}")
-    script_call.append(f'{script_path.parent}\\apps\\{appname}') # call Textreport
+    text_report_path = script_path.parent / 'apps' / appname
+    script_call.append (text_report_path) # call Textreport
     script_call.append(f'{output_file}')
     result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-    os.rename(f"{output_file.parent}\\Report.txt", f"{output_file.with_suffix('')}_QCReport.txt")
+    report_path = output_file.parent / 'Report.txt'
+    os.rename(report_path, f"{output_file.with_suffix('')}_QCReport.txt")
+
+
 
 
 if __name__ == "__main__":

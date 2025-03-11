@@ -3,7 +3,7 @@ from lxml import etree
 
 import subprocess
 import argparse
-import shutil
+import stat
 import logging
 import os
 import sys
@@ -106,10 +106,15 @@ def main():
     script_call.append (f'{text_report_path}') # call Textreport
     script_call.append(f'{output_file}')
 
-    logging.info(f'{script_call}');
+    logging.info(f'{script_call}')
     try:
         logging.info(f"Start Converting xqar to human readable form :")
-        result = subprocess.run(f'{script_call}', check=True, capture_output=True, text=True)
+        if sys.platform.startswith("linux") :
+            os.chmod(text_report_path, stat.S_IXUSR) #chmode +x TextReport (in docker i.e. the Docker )
+            # Confirm permissions (optional)
+            permissions = oct(os.stat(text_report_path).st_mode)[-3:]
+            logging.info(f"Permissions: {permissions}")
+        result = subprocess.run(script_call, check=True, capture_output=True, text=True)
         logging.info(f"Succeeded with output:")
         logging.info(result.stdout)  # print default output from sub process
         logging.info(result.stderr)  # print logging output from sub process

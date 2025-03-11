@@ -102,19 +102,25 @@ def main():
         appname = Path('TextReport')
     else:
         print(f"unknown system: {sys.platform}")
-    text_report_path = script_path.parent / 'apps' / appname
-    script_call.append (f'{text_report_path}') # call Textreport
+    text_report_executable_path = script_path.parent / 'apps' / appname
+    script_call.append (f'{text_report_executable_path}') # call Textreport
     script_call.append(f'{output_file}')
 
     logging.info(f'{script_call}')
     try:
         logging.info(f"Start Converting xqar to human readable form :")
         if sys.platform.startswith("linux") :
-            os.chmod(text_report_path, stat.S_IXUSR) #chmode +x TextReport (in docker i.e. the Docker )
+            os.chmod(text_report_executable_path, stat.S_IXUSR) #chmode +x TextReport (in docker i.e. the Docker )
             # Confirm permissions (optional)
-            permissions = oct(os.stat(text_report_path).st_mode)[-3:]
+            permissions = oct(os.stat(text_report_executable_path).st_mode)[-3:]
             logging.info(f"Permissions: {permissions}")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
+        
+        xqar_path_without_extension = output_file.with_suffix('')  # Get full path without extension
+        new_path = f"{xqar_path_without_extension}_QCReport.txt"
+        result_text_path = output_file.parent / 'Report.txt'
+        result_text_path.rename(new_path)
+
         logging.info(f"Succeeded with output:")
         logging.info(result.stdout)  # print default output from sub process
         logging.info(result.stderr)  # print logging output from sub process
@@ -123,12 +129,6 @@ def main():
         logging.error(f"Error output: {e.stderr}")
         logging.error(f"Error output: {e.stdout}")
     exit(1)
-
-
-    report_path = output_file.parent / 'Report.txt'
-    os.rename(report_path, f"{output_file.with_suffix('')}_QCReport.txt")
-
-
 
 
 if __name__ == "__main__":

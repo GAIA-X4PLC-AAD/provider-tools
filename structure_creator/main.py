@@ -10,30 +10,92 @@ import requests
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
-extensions = {"pdf", "png", "mp4", "geojson", "zip", "json", "txt", "xodr", "md", "html", "did" "other"}
-
-extensions_to_category = {
-    'png': 'Image',
-    'mp4': 'Video',
-    'txt': 'Document',
-    'pdf': 'Document',
-    'doc': 'Document',
-    'geojson': 'Routing',
-    'bjson' : 'AssetData', 
-    'xqar' : 'MetaData',
-    'zip' : 'Asset',
-    'json' : '3DPreview'
-}
-
-category_to_type = {
-   'Image' : 'visualization',
-   'Video' : 'visualization',
-   '3DPreview' : 'visualization',
-   'Routing' : 'visualization',
-   'Document' : 'documentation',
-   'AssetData' : 'assetData',
-   'Asset' : 'assetData',
-   'MetaData' : 'metadata',
+# "assetData" "documentation" "visualization" "metadata" "validation" "license" "other"
+categories = {
+    "assetData" : [
+        {
+            "type" : "Asset",
+            "extensions" : ["xodr", "xosc", "zip", "crg"],
+            "folder" : "data",
+            'mask' : '{name}',
+            'role' : 'owner'
+        }
+    ],
+    "documentation" : [
+        {
+            "type" : "Document",
+            "extensions" : ["pdf", "txt", "md"],
+            "folder" : "documentation",
+            'mask' : '{name}_{file}',
+            'role' : 'publicUser'
+        }
+    ],   
+    "visualization" : [
+        {
+            "type" : "Image",
+            "extensions" : ["png", "jpeg"],
+            "folder" : "visualization",
+            'mask' : '{name}_impression-{number}',
+            'role' : 'publicUser'
+        },
+        {
+            "type" : "Video",
+            "extensions" : ["mp4"],
+            "folder" : "visualization",
+            'mask' : '{name}',
+            'role' : 'publicUser'
+        },
+        {
+            "type" : "3DPreview",
+            "extensions" : ["json"],
+            "folder" : "visualization/3d_preview",
+            'mask' : '{name}',
+            'role' : 'publicUser'
+        },
+        {
+            "type" : "Routing",
+            "extensions" : ["geojson"],
+            "folder" : "visualization",
+            'mask' : '',
+            'role' : 'publicUser'
+        }
+    ],      
+    "metadata" : [
+        {
+            "type" : "MetaData",
+            "extensions" : ["json"],
+            "folder" : "metadata",
+            'mask' : 'domain_metadata',
+            'role' : 'publicUser'
+        }
+    ],   
+    "validation" : [
+        {
+            "type" : "Validation",
+            "extensions" : ["xqar", "txt"],
+            "folder" : "validation",
+            'mask' : '',
+            'role' : 'publicUser'
+        }
+    ],
+    "license" : [
+        {
+            "type" : "License",
+            "extensions" : ["", "txt", "md"],
+            'folder' : '../',
+            'mask' : 'LICENSE',
+            'role' : 'publicUser'
+        }
+    ],       
+    "other" : [
+        {
+            "type" : "Service",
+            "extensions" : ["bjson"],
+            "folder" : "data",
+            'mask' : '{name}',
+            'role' : 'registeredUser'
+        }
+    ]            
 }
 
 asset_type = {
@@ -51,78 +113,49 @@ asset_type = {
         'type' : 'environment-model',
         'classname' : 'environment-model',
         'link' : 'environment-model-asset-example'
+    },
+    'crg' : {
+        'type' : 'surface-model',
+        'classname' : 'surface-model',
+        'link' : 'surface-model-asset-example'
     }
 }
 
-type_data = {
-    'AssetData' : {
-        'folder' : 'data',
-        'mask' : '{asset}'
-    },
-    'Data' : {
-        'folder' : 'data',
-        'mask' : '{asset}'
-    },
-    'Document' : {
-        'folder' : 'documentation',
-        'mask' : '{asset}_{file}'
-    }, 
-    'License' : {
-        'folder' : '../',
-        'mask' : 'LICENSE'
-    },
-    'Metadata' : {
-        'folder' : 'metadata',
-        'mask' : 'domain_metadata'
-    },
-    'Validation' : {
-        'folder' : 'validation',
-        'mask' : 'qcReport'
-    },
-    'Image' : {
-        'folder' : 'visualization',
-        'mask' : '{asset}'
-    },
-    'Routing' : {
-        'folder' : 'visualization',
-        'mask' : 'roadNetwork'
-    },
-    'Video' : {
-        'folder' : 'visualization',
-        'mask' : '{asset}'
-    },
-    '3DPreview' : {
-        'folder' : 'visualization',
-        'mask' : 'detailRoadNetwork'
-    }
-}
+def get_data_from_category_type(category, type):
+    if category in categories:
+        found_category = categories[category]
+        for data in found_category:
+            if data["type"] == type:
+                return data
+    return None
 
-def get_data_typ(file: Path)-> str:
+def get_data_from_folder_extension(folder, extension):
+    for key, category in categories.items():
+        for data in category:
+            if folder in data["folder"]:
+                for ext in data["extensions"]:
+                    if extension == ext:
+                        return data, key
+    return None, None
+
+
+def get_file_data_from_category(file: Path)-> dict:
     extension = file.suffix.lstrip('.') # Get file extension without the dot
-    if extension in extensions_to_category:
-        typ = extensions_to_category[extension]
-        if typ is not None:
-            return typ
-    # try with subfolder
-    sub_path = file.name if file.is_dir() else file.parent.name
-    for key, value in type_data.items():
-        if value['folder'] == sub_path:
-            return key
+    folder = file.parent.name
+
+    data, key = get_data_from_folder_extension(folder, extension)
+    if data:
+        data["category"] = key
+        return data
+    
     return None
 
 
-def get_file(user_data, filename: Path) -> Path:
+def get_file_data(user_data, filename: Path) -> dict:
     for file in user_data:
         if file['filename'] == filename:
             return file
     return None
-
-def get_file_type(filename: Path):
-    file_ext = filename.suffix.lstrip('.')
-    if file_ext in extensions:
-        return file_ext
-    else:
-        return "other"
 
 def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: str):
     file_data = {}
@@ -135,90 +168,64 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
         file_meta_data['manifest:uri'] = filename           
     else:        
         relative_path = filename.relative_to(abs_data_path)
-        file_meta_data['manifest:uri'] = relative_path.as_posix()    
-        file_meta_data['manifest:filename'] = os.path.basename(relative_path.as_posix())
+        file_meta_data['manifest:uri'] = "./" + relative_path.as_posix()
+        file_meta_data['manifest:filename'] = relative_path.name
         if os.path.exists(filename):
             file_meta_data['manifest:fileSize'] =  os.path.getsize(filename.as_posix())           
     
     return file_data
 
 
-def register_asset(data: dict, filename: Path, abs_data_path: Path, data_type: str, role: str, category: str):
+def register_asset(data: dict, filename: Path, abs_data_path: Path, category: str, role: str, data_type: str):
     files = []   
-    files.append(create_file_data(filename, abs_data_path, data_type, role))
+    files.append(create_file_data(filename, abs_data_path, category, role))
     
-    if category in data:
-        data[category].extend(files)
+    if data_type in data:
+        data[data_type].extend(files)
     else:
-        data[category] = files
-
-def get_data_type(file_type:str):
-    if file_type in category_to_type:
-        return category_to_type[file_type]
-    else:
-        return 'other'
+        data[data_type] = files
 
 
-def handle_bjson(filename, abs_data_path, data_type, role, data, category):
-    files = []
-    files.append(create_file_data(filename, abs_data_path, data_type, role))
-
-    if category in data:
-        data[category].extend(files)
-    else:
-        data[category] = files
-
-
-def register_folder(data: dict, user_data: dict, path: Path, abs_data_path: Path, role: str, category: str):
+def register_folder(data: dict, user_data: dict, path: Path, abs_data_path: Path):
     if not path.exists():
         return
     
-    files = []  
     for filename in path.rglob("*"):
         if filename.is_dir():
             continue
-        file = get_file(user_data, filename.name)
-        if file:
-            file_type = file['type']
+        
+        file_data = get_file_data_from_category(filename) # add from scripts
+        if not file_data:
+            return
+
+        category = file_data["category"]
+        role = file_data['role']
+        if category == 'assetData':
+            data_type = f'manifest:{category}'
         else:
-            file_type = get_data_typ(filename)
+            data_type = 'manifest:contentData'
 
-        if file_type == 'Service':
-            role = 'publicUser'
-        data_type = get_data_type(file_type)
-        if filename.suffix.lstrip('.') == 'bjson':
-            handle_bjson(filename, abs_data_path, data_type, role, data, category)
-            continue
-        files.append(create_file_data(filename, abs_data_path, data_type, role))
+        # add to json data
+        file_entry = create_file_data(filename, abs_data_path, category, role)
+        if data_type not in data:
+            data[data_type] = []
+        data[data_type].append(file_entry)
 
-    if len(files):
-        if category in data:
-            data[category].extend(files)
-        else:
-            data[category] = files
-
-def getMask(filename: Path, type : str, index : int) -> Path:
-    if type in type_data:
-        mask = type_data[type]['mask']
-    else:
-        logging.error(f'type {type} not found in type_data')
-        exit(1)
-
-    if type == 'Image':
-        mask = mask + '_impression-{number}'
-    elif type == 'Document' and filename.suffix == '.pdf' and not filename.stem.endswith("_Documentation"):
+def fill_mask(filename: Path, file_data : dict, index : int) -> Path:
+    mask = file_data["mask"]
+    if file_data["type"] == 'Document' and filename.suffix == '.pdf' and not filename.stem.endswith("_Documentation"):
         mask = mask + '_Documentation'
     return mask
 
-def createFileName(filename: Path, asset_name: Path, type : str, index : int) -> Path:
+def create_filename(filename: Path, asset_name: Path, file_data : dict, index : int) -> Path:
     basename = str(filename.stem)  # Name without extension
 
-    mask = getMask(filename, type, index)
+    mask = fill_mask(filename, file_data, index)
 
-    if "{asset}" in mask and "{file}" in mask:
+    if "{name}" in mask and "{file}" in mask:
         common_prefix  = os.path.commonprefix([basename, asset_name])
         basename = basename[len(common_prefix):]
-    mask = mask.replace(r"{asset}", asset_name)
+    mask = mask.replace(r"{name}", asset_name)
     mask = mask.replace(r"{file}", basename)
     
     basename = mask.replace(r"{number}", str(index).zfill(2))
@@ -226,21 +233,6 @@ def createFileName(filename: Path, asset_name: Path, type : str, index : int) ->
 
     filename_new = f"{basename}{extension}"
     return Path(filename_new)
-
-def create_readme(asset_name: Path, asset_typ: str, asset_link: str, filename: Path):
-    template = """# {asset_name}
-This example serves as a reference for onboarding an {asset_typ} asset into the data space of ENVITED and can be used as a template for other dataspaces as well. 
-It contains a fully described and consistent example of an {asset_typ} asset and an **`manifest.json` - file**.
-A complete **`asset`** in a specific domain includes the data itself and all necessary files for describing, evaluating, and visualizing the dataset. 
-The **`asset`** has a specific following folder structure and the sample can be downloaded here in this repo from the lastest release (**`asset.zip`**).
-
-# FAQ: 
-Get all information [here](https://github.com/GAIA-X4PLC-AAD/{asset_link})
-"""
-
-    readme_content = template.format(asset_name=asset_name, asset_typ=asset_typ, asset_link=asset_link)
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(readme_content)
 
 def is_url(string):
     parsed = urlparse(string)
@@ -301,6 +293,15 @@ def get_name_description_from_domainMetadata(filename, type):
 
     return name, description
 
+def get_asset(user_data):
+    for file in user_data:
+        if file['category'] == 'assetData' and file['type'] == 'Asset':
+            asset_name = Path(file['filename'])            
+            asset_extension = asset_name.suffix.lstrip('.')
+            asset_name = asset_name.stem
+            return asset_name, asset_extension
+    return None, None
+
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='the folder structure is completed from the user info and a metadata table is created for the manifest')   
@@ -330,16 +331,8 @@ def main():
         user_data = json.load(file)
 
     # initialize asset_name
-    asset_name = None
-    asset_extension = None
-    # get asset name from Data entry
-    for file in user_data:
-        if file['type'] == 'AssetData':
-            asset_name = Path(file['filename'])            
-            asset_extension = asset_name.suffix.lstrip('.')
-            asset_name = asset_name.stem
-            break
-    if not asset_name:
+    asset_name, asset_extension = get_asset(user_data)
+    if not asset_name or not asset_extension:
         logging.error(f'no asset found in {file}')
         exit(1)
 
@@ -348,26 +341,30 @@ def main():
     indexImage = 1
     for file in user_data:
         filename = Path(file['filename'])
-        # get sub folder
-        type = file['type']
-        if type in type_data:
-            sub_folder = type_data[type]['folder']
-        else:
-            logging.error(f'type {type} not found in type_data')
+
+        # get cat, type data
+        category = file['category']
+        typ = file['type']
+        cat_type_data = get_data_from_category_type(category, typ)
+        if not cat_type_data:
+            logging.error(f'type {typ} not found in category {category}')
             exit(1)
+
         # get dest name
         dest_name = filename.name
-        dest_name = createFileName(Path(dest_name), asset_name, type, indexImage)        
-        if type == 'Image':
-            indexImage = indexImage + 1 # incrase image index for image mask
+        dest_name = create_filename(Path(dest_name), asset_name, cat_type_data, indexImage)        
+        if category == "visualization" and typ == 'Image':
+            indexImage = indexImage + 1 # increase image index for image mask
 
         # destination filename
-        dest = data_path / sub_folder
+        dest = Path(data_path / cat_type_data["folder"])
         if not dest.exists():
             dest.mkdir()
-        dest = dest /  dest_name        
+        dest = dest /  dest_name    
+        dest = dest.resolve()    
         # source filename
         source = upload_folder / filename
+        source = source.resolve()
         # copy
         shutil.copy(source, dest)
 
@@ -378,15 +375,9 @@ def main():
     data['manifest:data'] = data_group
     for sub_folder in data_path.iterdir():
         relative_path = str(sub_folder.relative_to(data_path))
-        if relative_path == 'data':
-            type = 'manifest:assetData'
-            role = 'owner'
-        elif relative_path == 'temp':
+        if relative_path == 'temp':
             continue
-        else:
-            type = 'manifest:contentData'
-            role = 'publicUser'
-        register_folder(data_group, user_data, sub_folder, data_path, role, type)
+        register_folder(data_group, user_data, sub_folder, data_path)
 
     # register license
     # TODO get license from file or userinput link/type

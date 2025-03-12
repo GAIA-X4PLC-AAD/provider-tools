@@ -1313,7 +1313,7 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
         else:
             controller_names.add(controller.attrib['name'])
     if controllers:            
-        quantity_dict['scenario:controllers'] = ', '.join(map(str, controller_names))
+        quantity_dict['scenario:controllers'] = list(controller_names)
 
     meta_data_dict['scenario:quantity'] = quantity_dict
     

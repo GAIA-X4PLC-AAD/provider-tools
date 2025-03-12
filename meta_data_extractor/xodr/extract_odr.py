@@ -181,10 +181,10 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         bounding_dict['yMin'], bounding_dict['xMin'] = convert_to_LatLon(bounding_dict['xMin'], bounding_dict['yMin'], geo_reference)
         bounding_dict['yMax'], bounding_dict['xMax'] = convert_to_LatLon(bounding_dict['xMax'], bounding_dict['yMax'], geo_reference)
         bounding_data_dict = dict()
-        bounding_data_dict['georeference:xMin'] = bounding_dict['xMin']
-        bounding_data_dict['georeference:yMin'] = bounding_dict['yMin']
-        bounding_data_dict['georeference:xMax'] = bounding_dict['xMax']
-        bounding_data_dict['georeference:yMax'] = bounding_dict['yMax']
+        bounding_data_dict['georeference:xMin'] = str(bounding_dict['xMin'])
+        bounding_data_dict['georeference:yMin'] = str(bounding_dict['yMin'])
+        bounding_data_dict['georeference:xMax'] = str(bounding_dict['xMax'])
+        bounding_data_dict['georeference:yMax'] = str(bounding_dict['yMax'])
         projection_location_dict['georeference:boundingBox'] = bounding_data_dict
 
         # get 0,0 point in unit and convert to lat lon

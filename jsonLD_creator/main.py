@@ -21,7 +21,11 @@ import logging
 import argparse
 import requests
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+DEBUG = False
+if DEBUG:
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s - %(message)s')
+else:
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 
 class Config:
@@ -307,7 +311,6 @@ def create_property(properties, prefixes, meta_data, schema_name, group, prop_gr
     # prop_path
     prop_path = getValue('path', properties, False)
     prop_path = replace_namespace(prop_path, prefixes)        
-
     # set value
     data_from_metadata = get_data_from_metadata(prop_path, meta_data)
     if data_from_metadata is not None: # has data
@@ -315,7 +318,7 @@ def create_property(properties, prefixes, meta_data, schema_name, group, prop_gr
             for data_value in data_from_metadata:
                 property.append(data_value)
         elif type(property) == dict:
-            property['@value'] = data_from_metadata
+            property['@value'] = str(data_from_metadata)
         else:
             property = data_from_metadata
     elif is_required_property(properties): # is required
@@ -323,7 +326,7 @@ def create_property(properties, prefixes, meta_data, schema_name, group, prop_gr
         if isList_prop:
             property.append(data_value)    
         elif type(property) == dict:
-            property['@value'] = data_value
+            property['@value'] = str(data_value)
         else:
             property = data_value
     elif is_in_namespace(prop_path, schema_name): # not filled -> ignore

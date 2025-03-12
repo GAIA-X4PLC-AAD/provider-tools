@@ -65,10 +65,6 @@ def main():
         exit(1)
 
     if DEBUG:
-        base, ext = os.path.splitext(jsonLD_file)
-        # "_updated" zum Dateinamen hinzufügen
-        destination_path = f"{base}_updated{ext}"
-        shutil.copyfile(jsonLD_file, destination_path)
         return
 
     # call sd wizrad in docker composed

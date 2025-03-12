@@ -10,7 +10,7 @@
 	"params" : 	{
 		"call" : "wizard-caller/main.py",
 		"input" : {"" : "{path}/{sub_path}/domainMetadata.json"},
-		"output" : {"-out" : "{path}/{sub_path}/domainMetadata_updated.json"},
+		"output" : {"-out" : "{path}/{sub_path}/domainMetadata.json"},
 		"additional" : {
 			"-shacl" : "{path}/temp/domainMetadata.ttl"
 		}	

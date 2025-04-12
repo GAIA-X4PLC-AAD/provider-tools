@@ -7,93 +7,94 @@ import shutil
 import logging
 import os
 import requests
+import secrets
+import string
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
-# "assetData" "documentation" "visualization" "metadata" "validation" "license" "other"
 categories = {
-    "assetData" : [
+    "isSimulationData" : [
         {
             "type" : "Asset",
             "extensions" : ["xodr", "xosc", "zip", "crg"],
-            "folder" : "data",
+            "folder" : "simulation-data",
             'mask' : '{name}',
-            'role' : 'owner'
+            'role' : 'isOwner'
         }
     ],
-    "documentation" : [
+    "isDocumentation" : [
         {
             "type" : "Document",
             "extensions" : ["pdf", "txt", "md"],
             "folder" : "documentation",
             'mask' : '{name}_{file}',
-            'role' : 'publicUser'
+            'role' : 'isPublic'
         }
     ],   
-    "visualization" : [
+    "isMedia" : [
         {
             "type" : "Image",
             "extensions" : ["png", "jpeg"],
-            "folder" : "visualization",
+            "folder" : "media",
             'mask' : '{name}_impression-{number}',
-            'role' : 'publicUser'
+            'role' : 'isPublic'
         },
         {
             "type" : "Video",
             "extensions" : ["mp4"],
-            "folder" : "visualization",
+            "folder" : "media",
             'mask' : '{name}',
-            'role' : 'publicUser'
+            'role' : 'isPublic'
         },
         {
             "type" : "3DPreview",
             "extensions" : ["json"],
-            "folder" : "visualization/3d_preview",
+            "folder" : "media/3d_preview",
             'mask' : '{name}',
-            'role' : 'publicUser'
+            'role' : 'isPublic'
         },
         {
             "type" : "Routing",
             "extensions" : ["geojson"],
-            "folder" : "visualization",
+            "folder" : "media",
             'mask' : '',
-            'role' : 'publicUser'
+            'role' : 'isPublic'
         }
     ],      
-    "metadata" : [
+    "isMetadata" : [
         {
             "type" : "MetaData",
             "extensions" : ["json"],
             "folder" : "metadata",
             'mask' : 'domain_metadata',
-            'role' : 'publicUser'
+            'role' : 'isPublic'
         }
     ],   
-    "validation" : [
+    "isValidationReport" : [
         {
             "type" : "Validation",
             "extensions" : ["xqar", "txt"],
-            "folder" : "validation",
+            "folder" : "validation-reports",
             'mask' : '',
-            'role' : 'publicUser'
+            'role' : 'isPublic'
         }
     ],
-    "license" : [
+    "isLicense" : [
         {
             "type" : "License",
             "extensions" : ["", "txt", "md"],
             'folder' : '../',
             'mask' : 'LICENSE',
-            'role' : 'publicUser'
+            'role' : 'isPublic'
         }
     ],       
-    "other" : [
+    "isMiscellaneous" : [
         {
             "type" : "Service",
             "extensions" : ["bjson"],
-            "folder" : "data",
+            "folder" : "metadata",
             'mask' : '{name}',
-            'role' : 'registeredUser'
+            'role' : 'isRegistered'
         }
     ]            
 }
@@ -118,6 +119,39 @@ asset_type = {
         'type' : 'surface-model',
         'classname' : 'surface-model',
         'link' : 'surface-model-asset-example'
+    }
+}
+
+mime_type = {
+    'isManifest' : {
+        'json' : 'application/ld+json'
+    },
+    'isLicense' : {
+        '' : 'text/html'
+    },
+    'isSimulationData' : {
+        '' : 'application/x-{extension}'
+    },    
+    'isMiscellaneous' : {
+        'bjson' : 'application/json'
+    },    
+    'isDocumentation' : {
+        'pdf' : 'application/pdf',
+        'txt' : 'text/plain',
+        'md' : 'text/markdown'
+    },   
+    'isValidationReport' : {
+        'xqar' : 'application/x-xqar',
+        'txt' : 'text/plain'
+    },      
+    'isMetadata' : {
+        'json' : 'application/ld+json'
+    },       
+    'isMedia' : {
+        'png' : 'image/png',
+        'geojson' : 'application/x-geojson',
+        'json' : 'application/json',
+        'mp4' : 'video/mp4'
     }
 }
 
@@ -157,36 +191,57 @@ def get_file_data(user_data, filename: Path) -> dict:
             return file
     return None
 
+def get_mime_type(category: str, extension: str) -> str:
+    if category in mime_type:
+        cat_data = mime_type[category]
+        if extension in cat_data:
+            mime_type_str = cat_data[extension]
+        elif '' in cat_data:
+            mime_type_str = cat_data['']
+        else:
+            return None
+        
+        mime_type_str = mime_type_str.replace(r"{extension}", extension)
+        return mime_type_str
+    
+    return None
+
+
 def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: str):
     file_data = {}
-    file_data['manifest:accessRole'] = role
-    file_data['manifest:type'] = data_type
+    file_data['manifest:hasAccessRole'] = 'envited-x:' + role
+    file_data['manifest:hasCategory'] = 'envited-x:' + data_type
     file_meta_data = dict()
-    file_data['manifest:fileMetaData'] =  file_meta_data
+    file_data['manifest:hasFileMetadata'] =  file_meta_data
     file_is_url = is_url(str(filename))
     if file_is_url:
-        file_meta_data['manifest:uri'] = filename           
+        file_meta_data['manifest:filePath'] = filename           
+        file_meta_data['manifest:mimeType'] = get_mime_type(data_type, '')
     else:        
         relative_path = filename.relative_to(abs_data_path)
-        file_meta_data['manifest:uri'] = "./" + relative_path.as_posix()
+        file_meta_data['manifest:filePath'] = "./" + relative_path.as_posix()
         file_meta_data['manifest:filename'] = relative_path.name
         if os.path.exists(filename):
             file_meta_data['manifest:fileSize'] =  os.path.getsize(filename.as_posix())           
+        file_meta_data['manifest:mimeType'] = get_mime_type(data_type, relative_path.suffix.lstrip('.'))
     
     return file_data
 
 
-def register_asset(data: dict, filename: Path, abs_data_path: Path, category: str, role: str, data_type: str):
+def register_asset(data: dict, filename: Path, abs_data_path: Path, category: str, role: str, data_type=None):
     files = []   
     files.append(create_file_data(filename, abs_data_path, category, role))
-    
-    if data_type in data:
-        data[data_type].extend(files)
+    if data_type:
+        if data_type in data:
+            data[data_type].extend(files)
+        else:
+            data[data_type] = files
     else:
-        data[data_type] = files
+        data.clear()
+        data.update(files[0])
 
 
-def register_folder(data: dict, user_data: dict, path: Path, abs_data_path: Path):
+def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path):
     if not path.exists():
         return
     
@@ -200,16 +255,17 @@ def register_folder(data: dict, user_data: dict, path: Path, abs_data_path: Path
 
         category = file_data["category"]
         role = file_data['role']
-        if category == 'assetData':
-            data_type = f'manifest:{category}'
-        else:
-            data_type = 'manifest:contentData'
+        #if category == 'assetData':
+        #    data_type = f'manifest:{category}'
+        #else:
+        #    data_type = 'manifest:contentData'
 
         # add to json data
         file_entry = create_file_data(filename, abs_data_path, category, role)
-        if data_type not in data:
-            data[data_type] = []
-        data[data_type].append(file_entry)
+        #if data_type not in data:
+        #    data[data_type] = []
+        #data[data_type].append(file_entry)
+        data.append(file_entry)
 
 def fill_mask(filename: Path, file_data : dict, index : int) -> Path:
     mask = file_data["mask"]
@@ -295,13 +351,17 @@ def get_name_description_from_domainMetadata(filename, type):
 
 def get_asset(user_data):
     for file in user_data:
-        if file['category'] == 'assetData' and file['type'] == 'Asset':
+        if file['category'] == 'isSimulationData' and file['type'] == 'Asset':
             asset_name = Path(file['filename'])            
             asset_extension = asset_name.suffix.lstrip('.')
             asset_name = asset_name.stem
             return asset_name, asset_extension
     return None, None
 
+def generate_global_unique_id(length=36) -> str:
+    # Alphabet enthält Groß- und Kleinbuchstaben, Ziffern und den Bindestrich
+    alphabet = string.ascii_letters + string.digits + '-'
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='the folder structure is completed from the user info and a metadata table is created for the manifest')   
@@ -370,9 +430,10 @@ def main():
 
     # create json file for jsonLD creator
     data = {}
-    data['shacle_type'] = 'manifest:Manifest'
-    data_group = {}
-    data['manifest:data'] = data_group
+    data['did'] = 'did:web:registry.gaia-x.eu:Manifest:' + generate_global_unique_id()
+    data['shacle_type'] = 'envited-x:Manifest'
+    data_group = []
+    data['manifest:hasArtifacts'] = data_group
     for sub_folder in data_path.iterdir():
         relative_path = str(sub_folder.relative_to(data_path))
         if relative_path == 'temp':
@@ -384,26 +445,31 @@ def main():
     license_file = 'https://www.mozilla.org/en-US/MPL/2.0/'
     if license_file is not None:
         licence_group = {}
-        licence_group['manifest:spdxIdentifier'] = 'MPL-2.0'
+        licence_group['gx:license'] = 'MPL-2.0'
         
-        data['manifest:license'] = licence_group
-        register_asset(licence_group, license_file, data_path, 'license', 'publicUser', 'manifest:licenseData')
+        data['manifest:hasLicense'] = licence_group
+        register_asset(licence_group, license_file, data_path, 'isLicense', 'isPublic', 'manifest:licenseData')
         
-
+    # register manifest
+    manifest_group = {}
+    data['manifest:hasManifestReference'] = manifest_group
+    register_asset(manifest_group, data_path / 'manifest_reference.json', data_path, 'isManifest', 'isPublic')
 
     path = filename_out.parent    
     if not path.exists():
         path.mkdir()
 
     # create readme
-    url = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/manifest/README.md"
+    #url = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/manifest/README.md"
+    url = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/hd-map-asset-example/main/asset/README.md"
     script_path = Path(__file__).resolve()
     readme_template = script_path.parent / 'README_template.md'
     download_readme(url, readme_template)
     if asset_extension in asset_type:
-        # get name + description from domainMetadata.json
-        domainMetadata = filename_out.parent.parent / 'metadata/domainMetadata.json'
-        name, description = get_name_description_from_domainMetadata(domainMetadata, asset_type[asset_extension]['classname'].lower())
+        # get name + description from {asset_type}_instance.json
+        classname = asset_type[asset_extension]['classname']
+        domainMetadata = filename_out.parent.parent / f'metadata/{classname}_instance.json'
+        name, description = get_name_description_from_domainMetadata(domainMetadata, classname.lower())
         if name and description:
             readme_file = filename_out.parent.parent / 'README.md'
             update_readme(readme_template, readme_file, name, description)

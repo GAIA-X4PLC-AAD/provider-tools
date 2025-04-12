@@ -1,8 +1,9 @@
 from typing import Tuple
 from pathlib import Path
-import json
 
+import json
 import logging
+import extractor
 
 
 def get_meta_data(file_data: dict, attributes: dict):
@@ -46,6 +47,7 @@ def extract_meta_data(file: Path) ->Tuple[bool, dict]:
         return False
     
     data = {}
+    data['did'] = 'did:web:registry.gaia-x.eu:EnvironmentModel:' + extractor.generate_global_unique_id()
     data['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
     data[f'{get_namespace()}:{get_schema_name().lower()}'] = attributes
     

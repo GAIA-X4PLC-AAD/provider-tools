@@ -11,6 +11,7 @@ import typing
 import json
 import uuid
 import os
+import extractor
 
 
 logging.basicConfig(level=logging.DEBUG,
@@ -1409,6 +1410,7 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
 def get_meta_data(osc: OpenSCENARIO, file_path: Path, default_value: str = "Unknown", unknown_unit: str = "Unknown Unit") -> dict:
     
     meta_data_dict = dict()
+    meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:Scenario:' + extractor.generate_global_unique_id()
     meta_data_dict['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
     get_general_meta_data(meta_data_dict, osc, file_path, default_value, unknown_unit)
     get_osc_meta_data(meta_data_dict, osc, file_path, default_value, unknown_unit)

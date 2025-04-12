@@ -6,6 +6,7 @@ from typing import Tuple
 from extractor import get_position_from_osm, proj4_to_epsg, convert_to_LatLon
 
 import logging
+import extractor
 
 
 def container_in_str(data: any) -> str:
@@ -57,17 +58,21 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     #    meta_data_dict['data_link'] = {}
 
     # read xml and search for speed and the element max --> then sort by max and create a set --> set == unique values
-    quantity_dict['hdmap:speedLimit'] = container_in_str(sorted(set((max.attrib['max'] for max in root.findall('.//speed'))))) if check_data(root, ".//speed","max") else {0, 50}
+    speedlimit_range = sorted(set((max.attrib['max'] for max in root.findall('.//speed')))) if check_data(root, ".//speed","max") else {0, 50}
+    speedlimit_range_dict = {}
+    speedlimit_range_dict['hdmap:min'] = float(speedlimit_range[0])
+    speedlimit_range_dict['hdmap:max'] = float(speedlimit_range[-1])
+    quantity_dict['hdmap:speedLimit'] = speedlimit_range_dict
 
     # read xml and check if lane and its element type exists --> take all information of lane type and make them unique
     lane_types = set([lane.attrib['type'] for lane in root.findall('.//lane')]) if check_data(root, ".//lane","type") else None
     if lane_types:
-        content_dict['hdmap:laneTypes'] = list(lane_types)
+        content_dict['hdmap:laneTypes'] = list(sorted(lane_types))
 
     # read xml and check if road and its element type exists --> take all information of road type and make them unique 
     road_types = set([road_type.attrib['type'] for road_type in root.findall('./road/type')]) if check_data(root,"./road/type","type") else None
     if road_types:
-        content_dict['hdmap:roadTypes'] = list(road_types)
+        content_dict['hdmap:roadTypes'] = list(sorted(road_types))
 
     # create a unique list of object type if it exists
     objects = set([obj['type'] for obj in data['object']]) if check_data(root, ".//object", "type") else None
@@ -84,12 +89,12 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     # search for needed information
     #meta_data_dict['vendor_name'] = data['header']['vendor'] if check_data(root, ".//header","vendor") else default_value
     # convert to datetime object
-    general_dict = dict()
+    hasDataResource_dict = dict()
     general_data_dict = dict()
     try:        
         supported_date_syntax = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y", "%Y/%m/%d", "%d.%m.%Y", "%m/%d/%Y"]
         general_data_dict['general:recordingTime'] = convert_date_time(data['header']['date'], supported_date_syntax) if check_data(root,".//header","date") else default_value
-        general_dict['general:data'] = general_data_dict
+        hasDataResource_dict['general:data'] = general_data_dict
     except:
         logging.error('cannot extract date')
     
@@ -158,21 +163,15 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     ###################################################################################################################
     # constant meta data
 
-    # if it is a xodr file it describes road network
-    general_description_dict = dict()
-    general_description_dict['general:description'] = "road network"
-    general_description_dict['general:name'] = file_path.name.replace('.xodr', '')
-    general_dict['general:description'] = general_description_dict
-
-    # xodr files are from Opendrive and here is their link
-    #meta_data_dict['data_format'] = "Opendrive (link= https://www.asam.net/standards/detail/opendrive/)"    
-    format_dict['hdmap:type'] = 'ASAM OpenDRIVE'
+    # if it is a xodr file it describes road network    
+    hasDataResource_dict['gx:name'] = file_path.name.replace('.xodr', '')
+    hasDataResource_dict['gx:description'] = "road network"
 
     # bounding
     georeference_dict = dict()
     if geo_reference:
         projection_location_dict = dict()
-        georeference_dict['georeference:projectLocation'] = projection_location_dict
+        georeference_dict['georeference:hasProjectLocation'] = projection_location_dict
         bounding_dict = dict()
         bounding_dict['xMin'] = float(root.find('.//header').attrib['west']) if check_data(root, ".//header", "west") else unknown_unit
         bounding_dict['xMax'] = float(root.find('.//header').attrib['east']) if check_data(root, ".//header", "east") else unknown_unit
@@ -202,7 +201,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         viewpoint_dict['georeference:lat'] = str(center_lat)
         viewpoint_dict['georeference:lon'] = str(center_lon)
         geodetic_ref_system_dict['georeference:viewpoint'] = viewpoint_dict  
-        georeference_dict['georeference:geodeticReferenceSystem'] = geodetic_ref_system_dict
+        georeference_dict['georeference:hasGeodeticReferenceSystem'] = geodetic_ref_system_dict
 
     ###################################################################################################################
     # unfinished meta data
@@ -217,11 +216,21 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     
     
     meta_data_dict = dict()
+    meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:HdMap:' + extractor.generate_global_unique_id()
     meta_data_dict['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
-    meta_data_dict[f'{get_schema_name().lower()}:general'] = general_dict
-    meta_data_dict[f'{get_schema_name().lower()}:format'] = format_dict
-    meta_data_dict[f'{get_schema_name().lower()}:content'] = content_dict
-    meta_data_dict[f'{get_schema_name().lower()}:georeference'] = georeference_dict
+    meta_data_dict[f'{get_schema_name().lower()}:hasDataResource'] = hasDataResource_dict    
+
+    hasDataResourceExtension_dict = dict()
+    hasDataResourceExtension_dict[f'{get_schema_name().lower()}:hasFormat'] = format_dict
+    hasDataResourceExtension_dict[f'{get_schema_name().lower()}:hasContent'] = content_dict
+    hasDataResourceExtension_dict[f'{get_schema_name().lower()}:hasQuantity'] = quantity_dict
+    hasDataResourceExtension_dict[f'{get_schema_name().lower()}:hasQuality'] = {}
+    hasDataResourceExtension_dict[f'{get_schema_name().lower()}:hasDataSource'] = {}
+    hasDataResourceExtension_dict[f'{get_schema_name().lower()}:hasGeoreference'] = georeference_dict    
+    meta_data_dict[f'{get_schema_name().lower()}:hasDataResourceExtension'] = hasDataResourceExtension_dict
+
+    hasManifest_dict = dict() # TODO
+    meta_data_dict[f'{get_schema_name().lower()}:hasManifest'] = hasManifest_dict
 
     return meta_data_dict
 

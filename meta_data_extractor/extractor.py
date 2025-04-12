@@ -1,10 +1,12 @@
 from pathlib import Path
 from datetime import datetime
+from geopy.geocoders import Nominatim
+from pyproj import CRS, Transformer
 
 import logging
 import json
-from geopy.geocoders import Nominatim
-from pyproj import CRS, Transformer
+import secrets
+import string
 
 # manual assignment of local country name (Germany) to alpha-2 -> OSM only receives local name, but for alpha 2 code you need the English name.
 country_name_to_alpha2 = {
@@ -90,6 +92,10 @@ def convert_to_LatLon(x, y, proj4):
     lon, lat = transformer.transform(x, y)
     return lon, lat
 
+def generate_global_unique_id(length=36) -> str:
+    # Alphabet enthält Groß- und Kleinbuchstaben, Ziffern und den Bindestrich
+    alphabet = string.ascii_letters + string.digits + '-'
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 def datetime_handler(x):
     if isinstance(x, datetime.datetime):

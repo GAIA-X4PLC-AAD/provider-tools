@@ -5,7 +5,7 @@ import argparse
 import subprocess
 import logging
 
-DEBUG = False
+DEBUG = True
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 

@@ -23,6 +23,7 @@ import json
 import logging
 import argparse
 import requests
+import operator
 
 DEBUG = True
 if DEBUG:
@@ -51,25 +52,19 @@ def datetime_handler(x):
     raise TypeError("Unknown type")
     
 # check if value is greater/smaller then value
-def check_min_max(shacl_data, name: str, compare_value: int, greater : bool):
+def check_min_max(shacl_data, name: str, compare_value: int, op):
     if name in shacl_data:
-        value = int(shacl_data[name])
-        if greater:
-            if value >= compare_value:
-                return True
-        else:
-            if value <= compare_value:
-                return True
-        return False            
+        value = int(shacl_data[name])    
+        return op(value, compare_value)
     
     return None
 
 
 # check if min count >= 1 
 def is_required_property(shacl_data):
-    check = check_min_max(shacl_data, f'{SH}qualifiedMinCount', 1, True)
+    check = check_min_max(shacl_data, f'{SH}qualifiedMinCount', 1, operator.ge)
     if check is None:
-        check = check_min_max(shacl_data, f'{SH}minCount', 1, True)
+        check = check_min_max(shacl_data, f'{SH}minCount', 1, operator.ge)
 
     if check is None:
         return False
@@ -77,17 +72,20 @@ def is_required_property(shacl_data):
 
 
 # check if can have more entries
-# max count <= 1 or min count >= 2 
+# max count <= 1 or min count > 1 or min count 0
 def is_list_property(shacl_data):
-    check = check_min_max(shacl_data, f'{SH}qualifiedMaxCount', 1, False)
+    test = get_value('minCount',shacl_data)
+    if test is not None and test == '0':
+        test = 0 
+    check = check_min_max(shacl_data, f'{SH}qualifiedMaxCount', 1, operator.le)
     if check is None:
-        check = check_min_max(shacl_data, f'{SH}maxCount', 1, False)
+        check = check_min_max(shacl_data, f'{SH}maxCount', 1, operator.le)
     if check:
         return not check
     
-    check = check_min_max(shacl_data, f'{SH}qualifiedMinCount', 1, True)
+    check = check_min_max(shacl_data, f'{SH}qualifiedMinCount', 1, operator.ge)
     if check is None:
-        check = check_min_max(shacl_data, f'{SH}minCount', 1, True)
+        check = check_min_max(shacl_data, f'{SH}minCount', 1, operator.gt) or check_min_max(shacl_data, f'{SH}minCount', 0, operator.eq)
 
     if check is None:
         return False    
@@ -100,15 +98,7 @@ def get_value(name, values):
     name_pre = '#' + name
     for key, data in values.items():
         if name_pre in key:
-            return data            
-    #    if check_lower_case:
-    #        if name in key.lower():
-    #            return data # list   
-    #    else:
-    #        if name in key:
-    #            return data # list
-    
-
+            return data
     return None
 
 
@@ -189,7 +179,7 @@ def get_namespace_name_from_url(url: str) -> Tuple[str, str]:
     return None, None
 
 
-# from hdmap::Quantity 
+# from hdmap:Quantity 
 # to hdmap, Quantity
 def get_namespace(namespace_and_name):
     parts = namespace_and_name.split('::')
@@ -236,15 +226,17 @@ def create_node(namespace : str, shapename : str, type: str, lsonLD: Union[Dict,
 def get_shacle_shema(namespace : str) -> dict:
     if namespace in config.SHACLS:
         return config.SHACLS[namespace]
-    logging.error(f'{namespace} not found!')
-    exit(1)
+    #logging.error(f'{namespace} not found!')
+    #exit(1)
+    return None
 
 
 # get shape from shacle data
 def get_shacle_shape(namespace : str, shapename : str) -> dict:
     shacl_graph_data = get_shacle_shema(namespace)
-    if shapename in shacl_graph_data['dict']:
-        return shacl_graph_data['dict'][shapename]
+    if shacl_graph_data:
+        if shapename in shacl_graph_data['dict']:
+            return shacl_graph_data['dict'][shapename]
     
     return None
 

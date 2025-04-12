@@ -102,21 +102,25 @@ categories = {
 asset_type = {
     'xodr' : {
         'type' : 'HD-Map',
+        'category' : 'HdMap',
         'classname' : 'hdmap',
         'link' : 'hd-map-asset-example'
     },
     'xosc' : {
         'type' : 'Scenario',
+        'category' : 'Scenario',
         'classname' : 'scenario',
         'link' : 'scenario-asset-example'
     },
     'zip' : {
         'type' : 'environment-model',
+        'category' : 'environment-model',
         'classname' : 'environment-model',
         'link' : 'environment-model-asset-example'
     },
     'crg' : {
         'type' : 'surface-model',
+        'category' : 'surface-model',
         'classname' : 'surface-model',
         'link' : 'surface-model-asset-example'
     }
@@ -227,6 +231,16 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
     
     return file_data
 
+def register_licence(data: dict, filename: Path, abs_data_path: Path, category: str, role: str, data_type=None):
+    data = create_file_data(filename, abs_data_path, category, role)
+    if data_type:
+        if data_type in data:
+            data[data_type].extend(data)
+        else:
+            data[data_type] = data
+    else:
+        data.clear()
+        data.update(data)
 
 def register_asset(data: dict, filename: Path, abs_data_path: Path, category: str, role: str, data_type=None):
     files = []   
@@ -241,7 +255,7 @@ def register_asset(data: dict, filename: Path, abs_data_path: Path, category: st
         data.update(files[0])
 
 
-def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path):
+def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path, asset_data: dict, asset_did: str):
     if not path.exists():
         return
     
@@ -255,16 +269,15 @@ def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path
 
         category = file_data["category"]
         role = file_data['role']
-        #if category == 'assetData':
-        #    data_type = f'manifest:{category}'
-        #else:
-        #    data_type = 'manifest:contentData'
 
         # add to json data
         file_entry = create_file_data(filename, abs_data_path, category, role)
-        #if data_type not in data:
-        #    data[data_type] = []
-        #data[data_type].append(file_entry)
+        if category == 'isMetadata':
+            file_entry['manifest:iri'] = asset_did
+            file_entry['skos:note'] = f'This is the domain metadata for a {asset_data["type"]}.'
+            file_entry['sh:conformsTo'] = [f'https://ontologies.envited-x.net//{asset_data["classname"]}/v3/ontology']
+            test = 0
+                     
         data.append(file_entry)
 
 def fill_mask(filename: Path, file_data : dict, index : int) -> Path:
@@ -395,7 +408,9 @@ def main():
     if not asset_name or not asset_extension:
         logging.error(f'no asset found in {file}')
         exit(1)
-
+    if asset_extension in asset_type:        
+        asset_data = asset_type[asset_extension]
+        asset_did = f'did:web:registry.gaia-x.eu:{asset_data["category"]}:{generate_global_unique_id()}'
     # copy files
     upload_folder = user_input_file.parent
     indexImage = 1
@@ -431,14 +446,14 @@ def main():
     # create json file for jsonLD creator
     data = {}
     data['did'] = 'did:web:registry.gaia-x.eu:Manifest:' + generate_global_unique_id()
-    data['shacle_type'] = 'envited-x:Manifest'
+    data['shacle_type'] = 'envited-x::https://ontologies.envited-x.net/envited-x/v2/ontology#ManifestShape'
     data_group = []
     data['manifest:hasArtifacts'] = data_group
     for sub_folder in data_path.iterdir():
         relative_path = str(sub_folder.relative_to(data_path))
         if relative_path == 'temp':
             continue
-        register_folder(data_group, user_data, sub_folder, data_path)
+        register_folder(data_group, user_data, sub_folder, data_path, asset_data, asset_did)
 
     # register license
     # TODO get license from file or userinput link/type
@@ -448,7 +463,7 @@ def main():
         licence_group['gx:license'] = 'MPL-2.0'
         
         data['manifest:hasLicense'] = licence_group
-        register_asset(licence_group, license_file, data_path, 'isLicense', 'isPublic', 'manifest:licenseData')
+        register_licence(licence_group, license_file, data_path, 'isLicense', 'isPublic', 'manifest:licenseData')
         
     # register manifest
     manifest_group = {}

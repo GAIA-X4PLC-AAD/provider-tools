@@ -305,6 +305,7 @@ def register_list(key : str, value, meta_data: list, nodes : list, namespace: st
 
 # process node with all props and sub nodes
 def process_node(shape_value: dict, meta_data: Union[Dict, List], lsonLD_dict: dict, level : int):
+    handle_node =[]
     for value in shape_value:
         path, nodes = get_node_data(value)
         namespace, shapename = get_namespace_name_from_url(path)
@@ -312,8 +313,9 @@ def process_node(shape_value: dict, meta_data: Union[Dict, List], lsonLD_dict: d
         is_required = is_required_property(value)
         is_list = is_list_property(value)
         if is_list:
-            register_list(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)    
-            return # TODO hasArtifacts exist for multiple types via sh:hasValue envited-x:isSimulationData ;
+            if not key in handle_node:
+                register_list(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
+                handle_node.append(key) # e.g hasArtifacts exist for multiple types via sh:hasValue envited-x:isSimulationData ;
         else:
             register_key(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
 

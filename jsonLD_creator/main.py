@@ -159,7 +159,7 @@ def create_property(namespace : str, property_name : str, value: str, type: str,
         test = 0
         
     lsonLD_dict[key] = property
-    logging.debug(f'{" " * level * 3}add prop {key}')
+    #logging.debug(f'{" " * level * 3}add prop {key}')
 
 
 # from 'https://ontologies.envited-x.net/manifest/v4/ontology#hasManifestReference'
@@ -198,7 +198,7 @@ def create_namespace_name(namespace : str, shapename : str) -> str:
 # create node like
 # "hdmap:hasQuantity": {
 #       "@type": "hdmap:Quantity",
-def create_node(namespace : str, shapename : str, type: str, lsonLD_dict: dict, is_list : bool, level : int) -> dict:
+def create_node(namespace : str, shapename : str, type: str, lsonLD: Union[Dict,List], is_list : bool, level : int) -> dict:
     node = {}
     type_without_shape = type.replace('Shape', '')
     node['@type'] = create_namespace_name(namespace, type_without_shape)
@@ -210,14 +210,9 @@ def create_node(namespace : str, shapename : str, type: str, lsonLD_dict: dict, 
         test = 0
 
     if is_list:
-        if key in lsonLD_dict:
-            lsonLD_dict[key].append(node)
-        else:
-            node_as_list = []
-            node_as_list.append(node)
-            lsonLD_dict[key] = node_as_list
+        lsonLD.append(node)
     else:
-        lsonLD_dict[key] = node
+        lsonLD[key] = node
 
     logging.debug(f'{" " * level * 3}add node {key}')
     return node
@@ -285,37 +280,24 @@ def register_list(key : str, value, meta_data: list, nodes : list, namespace: st
         if not isinstance(meta_data[key], list):
             logging.error(f'meta_data of {key} should be list!')
             exit(1)
-        if nodes is None:
-            # register as property
-            namespace_sub, name_subtype = get_namespace_name_from_url(path)
-            type_url = get_value("#datatype", value, False)
-            if type_url:
-                namespace_type, type = get_namespace_name_from_url(type_url)
-                create_property(namespace, shapename, meta_data[key], type, None, lsonLD_dict, level)
-            else:
-                name_url = get_value("#name", value, False)
-                name = get_name_from_url(name_url)
-                property_name = create_namespace_name(namespace, name) if name is not None else None
-                create_property(namespace, shapename, meta_data[key], None, property_name, lsonLD_dict, level)
-        else:
-            # register as node
-            for sub_meta_data in meta_data[key]:
-                #test = sub_meta_data['manifest:hasCategory']
-                #logging.debug(f'{test}')
-                created_node = None
-                for node in nodes:
-                    namespace_sub, type = get_namespace_name_from_url(node)
-                    shape_value_sub = get_shacle_shape(namespace_sub, str(node))
-                    if shape_value_sub is None:
-                        continue
-                    
-                    if created_node is None:
-                        created_node = create_node(namespace_sub, shapename, type, lsonLD_dict, True, level)
-                    # only subnodes / properties of further nodes are registered
 
-                    # go deeper
-                    process_node(shape_value_sub, sub_meta_data, created_node, level + 1)
+        created_nodes = []
+        for sub_meta_data in meta_data[key]:
+            created_node = None
+            for node in nodes:
+                namespace_sub, type = get_namespace_name_from_url(node)
+                shape_value_sub = get_shacle_shape(namespace_sub, str(node))
+                if shape_value_sub is None:
+                    continue
+                
+                if created_node is None:
+                    created_node = create_node(namespace_sub, shapename, type, created_nodes, True, level)
+                # only subnodes / properties of further nodes are registered
 
+                # go deeper
+                process_node(shape_value_sub, sub_meta_data, created_node, level + 1)   
+
+        lsonLD_dict[key] = created_nodes
 
     elif is_required:
         # TODO write empty node
@@ -330,7 +312,8 @@ def process_node(shape_value: dict, meta_data: Union[Dict, List], lsonLD_dict: d
         is_required = is_required_property(value)
         is_list = is_list_property(value)
         if is_list:
-            register_list(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)                
+            register_list(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)    
+            return # TODO hasArtifacts exist for multiple types via sh:hasValue envited-x:isSimulationData ;
         else:
             register_key(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
 

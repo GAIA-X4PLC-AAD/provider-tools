@@ -96,14 +96,18 @@ def is_list_property(shacl_data):
 
 
 # get named value
-def get_value(name, values, check_lower_case : bool):
+def get_value(name, values):
+    name_pre = '#' + name
     for key, data in values.items():
-        if check_lower_case:
-            if name in key.lower():
-                return data # list   
-        else:
-            if name in key:
-                return data # list
+        if name_pre in key:
+            return data            
+    #    if check_lower_case:
+    #        if name in key.lower():
+    #            return data # list   
+    #    else:
+    #        if name in key:
+    #            return data # list
+    
 
     return None
 
@@ -111,22 +115,30 @@ def get_value(name, values, check_lower_case : bool):
 # get node value directrly from node or under qualifiedValueShape
 def get_node_data(values) -> Tuple[str, list]:
     node_paths = []
-    path_data = get_value("path", values, False)
+    path_data = get_value("path", values)
     if path_data == 'manifest:hasLicense':
         test = 0
     for key, data in values.items():        
         if 'qualifiedValueShape' in key:
-            node_data = get_value("node", data, False)
+            node_data = get_value("node", data)
             if isinstance(node_data, str):
-                node_paths.append(node_data)
+                property = get_value("property", data)
+                if property is not None:
+                    prop_path, prop_data = get_node_data(property)
+                    prop_dict = {}
+                    prop_dict[node_data] = prop_data
+                    node_paths.append(prop_dict)
+                else:
+                    node_paths.append(node_data)
+
                 return path_data, node_paths
             
-            and_data = get_value("and", node_data, False)
+            and_data = get_value("and", node_data)
             return path_data, and_data
     
-    node_data = get_value("node", values, False)
+    node_data = get_value("node", values)
     if node_data is None:
-        node_data = get_value("class", values, False)
+        node_data = get_value("class", values)
     if node_data is not None:
         node_paths.append(node_data)
         return path_data, node_paths
@@ -151,7 +163,9 @@ def create_property(namespace : str, property_name : str, value: str, type: str,
     else:
         if name is not None:
             property['@type'] = name
-        property['@id'] = value
+            property['@id'] = value
+        else:
+            property['@type'] = value
 
     key = create_namespace_name(namespace, property_name)
     # debug
@@ -159,7 +173,7 @@ def create_property(namespace : str, property_name : str, value: str, type: str,
         test = 0
         
     lsonLD_dict[key] = property
-    #logging.debug(f'{" " * level * 3}add prop {key}')
+    logging.debug(f'{" " * level * 3}add prop {key}')
 
 
 # from 'https://ontologies.envited-x.net/manifest/v4/ontology#hasManifestReference'
@@ -244,20 +258,21 @@ def register_key(key : str, value, meta_data: dict, nodes : list, namespace: str
         if nodes is None:
             # register as property
             namespace_sub, name_subtype = get_namespace_name_from_url(path)
-            type_url = get_value("#datatype", value, False)
+            type_url = get_value("datatype", value)
             if type_url:
                 namespace_type, type = get_namespace_name_from_url(type_url)
                 create_property(namespace, shapename, meta_data[key], type, None, lsonLD_dict, level)
             else:
-                name_url = get_value("#name", value, False)
+                name_url = get_value("name", value)
                 name = get_name_from_url(name_url)
                 property_name = create_namespace_name(namespace, name) if name is not None else None
                 create_property(namespace, shapename, meta_data[key], None, property_name, lsonLD_dict, level)
         else:
             created_node = None
             for node in nodes:
-                namespace_sub, type = get_namespace_name_from_url(node)
-                shape_value_sub = get_shacle_shape(namespace_sub, str(node))
+                ulr = node if isinstance(node, str) else list(node)[0]
+                namespace_sub, type = get_namespace_name_from_url(ulr)
+                shape_value_sub = get_shacle_shape(namespace_sub, str(ulr))
                 if shape_value_sub is None:
                     continue
                 
@@ -266,8 +281,9 @@ def register_key(key : str, value, meta_data: dict, nodes : list, namespace: str
                 # only subnodes / properties of further nodes are registered
 
                 # go deeper
+                nodes_sub = list(node.values())[0] if isinstance(node, dict) else None
                 lsonLD_node = created_node# if isinstance(meta_data[key], dict) else lsonLD_dict
-                process_node(shape_value_sub, meta_data[key], lsonLD_node, level + 1)
+                process_node(shape_value_sub, meta_data[key], nodes_sub, lsonLD_node, level + 1)
 
 
     elif is_required:
@@ -295,7 +311,7 @@ def register_list(key : str, value, meta_data: list, nodes : list, namespace: st
                 # only subnodes / properties of further nodes are registered
 
                 # go deeper
-                process_node(shape_value_sub, sub_meta_data, created_node, level + 1)   
+                process_node(shape_value_sub, sub_meta_data, None, created_node, level + 1)   
 
         lsonLD_dict[key] = created_nodes
 
@@ -304,18 +320,26 @@ def register_list(key : str, value, meta_data: list, nodes : list, namespace: st
         test = 0        
 
 # process node with all props and sub nodes
-def process_node(shape_value: dict, meta_data: Union[Dict, List], lsonLD_dict: dict, level : int):
+def process_node(shape_value: dict, meta_data: Union[Dict, List], nodes_in: list, lsonLD_dict: dict, level : int):
     handle_node =[]
     for value in shape_value:
         path, nodes = get_node_data(value)
         namespace, shapename = get_namespace_name_from_url(path)
         key = create_namespace_name(namespace, shapename)
+
+        # if node value in node in -> use nodes_in
+        if nodes_in is not None:
+            node_value = get_value("node", value)
+            matching_uri = next((uri for uri in nodes_in if str(uri) == node_value), None)
+            if matching_uri is not None:
+                nodes = nodes_in
+
         is_required = is_required_property(value)
         is_list = is_list_property(value)
         if is_list:
-            if not key in handle_node:
+            if not key in handle_node: # register key only one time : e.g hasArtifacts exist for multiple types via sh:hasValue envited-x:isSimulationData
                 register_list(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
-                handle_node.append(key) # e.g hasArtifacts exist for multiple types via sh:hasValue envited-x:isSimulationData ;
+                handle_node.append(key)
         else:
             register_key(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
 
@@ -379,11 +403,13 @@ def process_graph(schema_namespace, schema_name, meta_data):
         else:
             logging.error(f'did not found in extraced data!')
             exit(1)
-        config.JSON_OUT['@type'] = create_namespace_name(schema_namespace, schema_name)
+        name = get_name_from_url(schema_name)
+        name = name.replace('Shape', '')
+        config.JSON_OUT['@type'] = create_namespace_name(schema_namespace, name)
 
         # get first element of main shacle        
         shape_value = get_shacle_shape(schema_namespace, schema_name)
-        process_node(shape_value, meta_data, config.JSON_OUT, 0)
+        process_node(shape_value, meta_data, None, config.JSON_OUT, 0)
     else:
         logging.error(f'Cannot find ontology {schema_namespace}')
     

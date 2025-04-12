@@ -1,10 +1,7 @@
 {
 	"name" : "xodr_routing_creator",
 	"environment type" : "python",
-	"data folder" : "visualization",
-	"asset types" :	[
-		{ "extension" : "xodr" }
-	],
+	"data folder" : "media",
 	"params" : 	{
 		"call" : "xodr_routing_creator/main.py",
 		"output" : {"-out" : "{path}/{sub_path}/roadNetwork.geojson"},

@@ -9,28 +9,53 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
-def load_configs(config_dir: Path) -> list:
-    configs = []
-    
-    # Sort the filenames by their numeric prefix
-    sorted_filenames = sorted(config_dir.glob('*.json'))
+asset_types = {
+    "xodr" :"hdmap",
+    "xosc" :"scenario",
+    "3dmodel" :"environment-model"
+}
 
-    for filename in sorted_filenames:
+# load config file for asset_type
+def get_configs(config_dir: Path, asset_file: Path) ->list:
+    # get asset extension
+    asset_type_extension = get_asset_type_extension(asset_file)
+
+    # load process.json
+    process_file = config_dir / "process.json"
+    if not process_file.exists():
+        logging.error(f'config file {process_file} not exists')
+        exit(1)
+    with open((config_dir / process_file), 'r') as file:
+        config_process = json.load(file)
+
+    # filter for asset_type
+    config_files = []
+    for config in config_process.get("config_files", []):
+        if "extensions" in config:
+            if asset_type_extension in config["extensions"]:
+                config_files.append(config["filename"])
+        else:
+            config_files.append(config["filename"])   
+
+    # load configs
+    configs = []
+    for filename in config_files:
+        config_file = config_dir / filename
+        if not config_file.exists():
+            logging.error(f'config file {config_file} not exists')
+            exit(1)    
+
         with open((config_dir / filename), 'r') as file:
-            configs.append(json.load(file))
-    
+            configs.append(json.load(file)) 
+
     return configs
 
 
-def filter_scripts_by_asset_type(configs: list, asset_type: str) -> list:
-    matching_configs = [config for config in configs if any(asset['extension'] == asset_type for asset in config['asset types'])]
-    return matching_configs
-
-
-def replace_file_pattern(filepath: str, path: Path, sub_path: Path, name: str) -> str:
+def replace_file_pattern(filepath: str, path: Path, sub_path: Path, name: str, asset_type: str) -> str:
     updated_string = filepath.replace(r"{path}", str(path))
     updated_string = updated_string.replace(r"{sub_path}", str(sub_path))
     updated_string = updated_string.replace(r"{name}", name)
+    updated_string = updated_string.replace(r"{asset_type}", asset_type)
     if 'https:' not in updated_string:
         filename = Path(updated_string)
         filename = filename.as_posix()
@@ -69,12 +94,14 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
         script_call.append('frozen_modules=off')
     script_call.append(script_path)
 
+    asset_type = get_asset_type(get_asset_type_extension(asset_file))     
+
     # input
     if 'input' in script_config['params']:
         for name,value in script_config['params']['input'].items():
             if name:
                 script_call.append(name)
-            updated_string = replace_file_pattern(value, output_dir, sub_path, asset_name)
+            updated_string = replace_file_pattern(value, output_dir, sub_path, asset_name, asset_type)
             script_call.append(updated_string)
     else:
         script_call.append(asset_file)
@@ -83,7 +110,7 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
     if 'output' in script_config['params']:     
         for name,value in script_config['params']['output'].items():
             script_call.append(name)
-            updated_string = replace_file_pattern(value, output_dir, sub_path, asset_name)
+            updated_string = replace_file_pattern(value, output_dir, sub_path, asset_name, asset_type)
             script_call.append(updated_string)    
             # TODO create folder here or in sub script?    
             directory = Path(updated_string).parent
@@ -94,7 +121,7 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
         for name,value in script_config['params']['additional'].items():
             script_call.append(name)
             if value:                
-                updated_string = replace_file_pattern(value, output_dir, sub_path, asset_name)
+                updated_string = replace_file_pattern(value, output_dir, sub_path, asset_name, asset_type)
                 script_call.append(updated_string)
 
     # run
@@ -111,6 +138,7 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
         logging.error(f"Error output: {e.stdout}")
         exit(1)
 
+
 def create_zip(output_dir: Path, zip_filename : Path):
     with ZipFile(zip_filename, 'w') as zipf:
         for file_path in output_dir.rglob('*'):            
@@ -121,11 +149,19 @@ def create_zip(output_dir: Path, zip_filename : Path):
                 file_local = file_path.relative_to(output_dir)
                 zipf.write(file_path, file_local)
 
+
 def get_asset_type_extension(asset_file: Path):
     asset_type = asset_file.suffix.lstrip('.') # Get file extension without the dot
     if asset_type == 'zip' or asset_type == '7z':
         asset_type = '3dmodel'
     return asset_type
+
+def get_asset_type(asset_type: Path) -> str:
+    if asset_type in asset_types:
+        return asset_types[asset_type]
+    
+    logging.error(f'asset type not found {asset_type}')
+    exit(1)
 
 
 def main():
@@ -136,27 +172,23 @@ def main():
     parser.add_argument('-out', type=str, help='output path for asset archive.')
     args = parser.parse_args()
 
-    # Load configuration files
-    config_dir = Path(args.config)
-    config_dir = config_dir.resolve()
-    if not config_dir.is_dir():
-        logging.error(f'config path {config_dir} not exists')
-        exit(1)
-    configs = load_configs(config_dir)
-
-    # Determine asset type (e.g., ".xodr")
+    # determine asset type (e.g., ".xodr")
     asset_file = Path(args.filename)
     asset_file = asset_file.resolve()
     if not asset_file.exists():
         logging.error(f'asset file {asset_file} not exists')
         exit(1)
     logging.info(f'asset file {asset_file}')
-    asset_type = get_asset_type_extension(asset_file)
 
-    # Filter scripts that are applicable to the asset type
-    applicable_scripts = filter_scripts_by_asset_type(configs, asset_type)
+    # load all configs that are applicable to the asset type 
+    config_dir = Path(args.config)
+    config_dir = config_dir.resolve()
+    if not config_dir.is_dir():
+        logging.error(f'config path {config_dir} not exists')
+        exit(1)
+    applicable_scripts = get_configs(config_dir, asset_file)
 
-    # Create, cleanup output directory for the asset file
+    # create, cleanup output directory for the asset file
     asset_name = asset_file.stem
     if '.' in asset_name:
         logging.error(f"File {asset_name} has points in name! Not supported!")
@@ -170,19 +202,18 @@ def main():
     output_sub_dir.mkdir(parents=True, exist_ok=True)
     print (f'output path {output_sub_dir}')  
 
-    # Execute each script and collect outputs
+    # execute each script and collect outputs
     for script_config in applicable_scripts:
         execute_script(script_config, asset_file, output_sub_dir)
 
-    # Create a zip file of the output directory
     # remove temp folder before
     temp_path = output_sub_dir / 'temp'
     shutil.rmtree(temp_path)
-    # create zip
+
+    # create a zip file of the output directory
     zip_filename = output_sub_dir / f"asset.zip"
     create_zip(output_sub_dir, zip_filename)
-    # remove zipped folder
-    #shutil.rmtree(output_sub_dir)
+
 
 if __name__ == "__main__":
     main()

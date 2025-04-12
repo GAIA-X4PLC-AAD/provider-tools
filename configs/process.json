@@ -1,0 +1,59 @@
+{
+	"config_files" : [
+		{
+			"filename": "config_meta_data_extractor.json",
+			"extensions": ["xodr", "xosc"]		
+		},
+		{
+			"filename": "config_asset_jsonLD_creator.json",
+			"extensions": ["xodr", "xosc"]		
+		},
+		{
+			"filename": "config_3dmodel_jsonLD_creator.json",
+			"extensions": ["3dmodel"]		
+		},
+		{
+			"filename": "config_shacle_combiner.json"	
+		},
+		{
+			"filename": "config_wizard_caller.json"	
+		},
+		{
+			"filename": "config_jsonLD_validator.json"	
+		},
+		{
+			"filename": "config_quality_checker_asam_xodr.json",
+			"extensions": ["xodr"]		
+		},	
+		{
+			"filename": "config_quality_checker_asam_xosc.json",
+			"extensions": ["xosc"]		
+		},	
+		{
+			"filename": "config_quality_checker_openmsl_xodr.json",
+			"extensions": ["xodr"]		
+		},			
+		
+		{
+			"filename": "config_xodr_routing_creator.json",
+			"extensions": ["xodr"]		
+		},	
+		{
+			"filename": "config_vcs_odr-converter.json",
+			"extensions": ["xodr"]		
+		},	
+		{
+			"filename": "config_asset_reducer.json",
+			"extensions": ["xodr"]		
+		},	
+		{
+			"filename": "config_structure_creator.json"
+		},	
+		{
+			"filename": "config_structure_jsonLD_creator.json"
+		},	
+		{
+			"filename": "config_structure_jsonLD_validator.json"
+		}										
+	]
+}

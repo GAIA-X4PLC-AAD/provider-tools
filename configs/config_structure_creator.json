@@ -2,11 +2,6 @@
 	"name" : "structure_creator",
 	"environment type" : "python",
 	"data folder" : "temp",
-	"asset types" :	[
-		{ "extension" : "xodr" },
-		{ "extension" : "xosc" },
-        { "extension" : "3dmodel" }
-	],
 	"params" : 	{
 		"call" : "structure_creator/main.py",
 		"input" : {"" : "{path}/../../uploads/uploadedFiles.json"},

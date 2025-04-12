@@ -2,10 +2,6 @@
 	"name" : "meta_data_extractor",
 	"environment type" : "python",
 	"data folder" : "metadata",
-	"asset types" :	[
-		{ "extension" : "xodr" }, 
-		{ "extension" : "xosc" }
-	],
 	"params" : 	{
 		"call" : "meta_data_extractor/main.py",
 		"output" : { "-out" : "{path}/temp/{name}_extractor.json"}

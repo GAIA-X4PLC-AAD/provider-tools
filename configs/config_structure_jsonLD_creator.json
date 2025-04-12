@@ -2,15 +2,10 @@
 	"name" : "jsonLD creator",
 	"environment type" : "python",
 	"data folder" : "",
-	"asset types" :	[
-		{ "extension" : "xodr" }, 
-		{ "extension" : "xosc" },
-        { "extension" : "3dmodel" }
-	],
 	"params" : 	{
 		"call" : "jsonLD_creator/main.py",
 		"input" : {"" : "{path}/temp/{name}_structure.json"},
-		"output" : {"-out" : "{path}/manifest.json"},
+		"output" : {"-out" : "{path}/manifest_reference.json"},
 		"additional" : {
 			"-ontology" : "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main"
 		}		

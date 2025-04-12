@@ -1,0 +1,13 @@
+{
+	"name" : "wizard-caller",
+	"environment type" : "python",
+	"data folder" : "metadata",
+	"params" : 	{
+		"call" : "wizard-caller/main.py",
+		"input" : {"" : "{path}/{sub_path}/{asset_type}_instance.json"},
+		"output" : {"-out" : "{path}/{sub_path}/{asset_type}_instance.json"},
+		"additional" : {
+			"-shacl" : "{path}/temp/{asset_type}_instance.ttl"
+		}	
+	}
+}

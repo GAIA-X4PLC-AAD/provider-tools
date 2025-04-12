@@ -2,14 +2,9 @@
 	"name" : "shacl_combiner",
 	"environment type" : "python",
 	"data folder" : "metadata",
-	"asset types" :	[
-		{ "extension" : "xodr" }, 
-		{ "extension" : "xosc" },
-        { "extension" : "3dmodel" }
-	],
 	"params" : 	{
 		"call" : "shacl_combiner/main.py",
-		"input" : {"" : "{path}/{sub_path}/domainMetadata.json"},
+		"input" : {"" : "{path}/{sub_path}/{asset_type}_instance.json"},
 		"output" : {"-out" : "{path}/temp"}
 	}
 }

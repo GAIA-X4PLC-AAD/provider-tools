@@ -2,14 +2,10 @@
 	"name" : "jsonLD creator",
 	"environment type" : "python",
 	"data folder" : "metadata",
-	"asset types" :	[
-		{ "extension" : "xodr" }, 
-		{ "extension" : "xosc" }
-	],
-	"params" : 	{
+	"params" : {
 		"call" : "jsonLD_creator/main.py",
-		"input" : {"" : "{path}/temp/{name}_extractor.json"},
-		"output" : {"-out" : "{path}/{sub_path}/domainMetadata.json"},
+		"input" : {"" : "{path}/../../uploads/statistic_3dModel.json"},
+		"output" : {"-out" : "{path}/{sub_path}/{asset_type}_instance.json"},
 		"additional" : {
 			"-ontology" : "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main",
             "-removeShacl" : ""            

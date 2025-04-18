@@ -213,8 +213,8 @@ def get_mime_type(category: str, extension: str) -> str:
 
 def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: str):
     file_data = {}
-    file_data['manifest:hasAccessRole'] = 'envited-x:' + role
-    file_data['manifest:hasCategory'] = 'envited-x:' + data_type
+    file_data['manifest:hasAccessRole'] = 'manifest:' + role
+    file_data['manifest:hasCategory'] = 'manifest:' + data_type
     file_meta_data = dict()
     file_data['manifest:hasFileMetadata'] =  file_meta_data
     file_is_url = is_url(str(filename))
@@ -456,14 +456,15 @@ def main():
         register_folder(data_group, user_data, sub_folder, data_path, asset_data, asset_did)
 
     # register license
-    # TODO get license from file or userinput link/type
+    # TODO get license from file or user input link/type
     license_file = 'https://www.mozilla.org/en-US/MPL/2.0/'
     if license_file is not None:
-        licence_group = {}
+        licence_group = {}        
         licence_group['gx:license'] = 'MPL-2.0'
-        
         data['manifest:hasLicense'] = licence_group
-        register_licence(licence_group, license_file, data_path, 'isLicense', 'isPublic', 'manifest:licenseData')
+        hasLink_group = {}
+        licence_group['manifest:hasLink'] = hasLink_group
+        register_asset(hasLink_group, license_file, data_path, 'isLicense', 'isPublic')        
         
     # register manifest
     manifest_group = {}

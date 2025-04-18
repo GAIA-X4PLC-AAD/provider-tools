@@ -228,7 +228,7 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
         relative_path = filename.relative_to(abs_data_path)        
         file_meta_data['manifest:filename'] = relative_path.name            
 
-        if os.path.exists(filename):
+        if os.path.exists(filename) and data_type != 'isManifest':
             file_meta_data['manifest:fileSize'] =  os.path.getsize(filename.as_posix()) 
             # create IPFS CIDv1 identifier   
             with open(filename, "rb") as f:
@@ -247,9 +247,11 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
                 width, height = img.size
                 dimesion_group = {}
                 dimesion_group["manifest:unit"] = "pixels"
-                dimesion_group["manifest:width"] = width
-                dimesion_group["manifest:height"] = height
+                dimesion_group["manifest:width"] = str(width)
+                dimesion_group["manifest:height"] = str(height)
                 file_meta_data['manifest:hasDimensions'] = dimesion_group
+        else:
+            file_meta_data['manifest:filePath'] = "./" + relative_path.as_posix()
                 
         file_meta_data['manifest:mimeType'] = get_mime_type(data_type, relative_path.suffix.lstrip('.'))
     
@@ -296,11 +298,11 @@ def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path
 
         # add to json data
         file_entry = create_file_data(filename, abs_data_path, category, role)
-        if category == 'isMetadata':
-            file_entry['manifest:iri'] = asset_did
-            file_entry['skos:note'] = f'This is the domain metadata for a {asset_data["type"]}.'
-            file_entry['sh:conformsTo'] = [f'https://ontologies.envited-x.net//{asset_data["classname"]}/v3/ontology']
-            test = 0
+        #if category == 'isMetadata':
+        #    file_entry['manifest:iri'] = asset_did
+        #    file_entry['skos:note'] = f'This is the domain metadata for a {asset_data["type"]}.'
+        #    file_entry['sh:conformsTo'] = [f'https://ontologies.envited-x.net//{asset_data["classname"]}/v3/ontology']
+        #    test = 0
                      
         data.append(file_entry)
 

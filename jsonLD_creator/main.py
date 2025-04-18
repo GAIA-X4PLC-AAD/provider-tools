@@ -146,6 +146,11 @@ def get_node_data(values) -> Tuple[str, list]:
 #      "@id": "envited-x:isPublic"
 # }
 def create_property(namespace : str, property_name : str, value: str, type: str, name: str, lsonLD_dict: dict, level : int):
+    key = create_namespace_name(namespace, property_name)
+    # debug
+    if key == 'gx:license':
+        test = 0
+
     property = {}
     if type:
         property['@type'] = f'xsd:{type}'
@@ -155,13 +160,8 @@ def create_property(namespace : str, property_name : str, value: str, type: str,
             property['@type'] = name
             property['@id'] = value
         else:
-            property['@type'] = value
-
-    key = create_namespace_name(namespace, property_name)
-    # debug
-    if key == 'manifest:hasAccessRole':
-        test = 0
-        
+            property['@value'] = value
+       
     lsonLD_dict[key] = property
     logging.debug(f'{" " * level * 3}add prop {key}')
 
@@ -397,11 +397,16 @@ def process_graph(schema_namespace, schema_name, meta_data):
             exit(1)
         name = get_name_from_url(schema_name)
         name = name.replace('Shape', '')
-        config.JSON_OUT['@type'] = create_namespace_name(schema_namespace, name)
+        shacle_namespace = 'manifest' if schema_namespace == 'envited-x' else schema_namespace
+        config.JSON_OUT['@type'] = create_namespace_name(shacle_namespace, name)
 
         # get first element of main shacle        
         shape_value = get_shacle_shape(schema_namespace, schema_name)
         process_node(shape_value, meta_data, None, config.JSON_OUT, 0)
+
+        # end end remove envited-x prefix
+        if 'envited-x' in config.JSON_OUT['@context']:
+            del config.JSON_OUT['@context']['envited-x']        
     else:
         logging.error(f'Cannot find ontology {schema_namespace}')
     

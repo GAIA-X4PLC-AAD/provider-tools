@@ -1,5 +1,8 @@
 from pathlib import Path
 from urllib.parse import urlparse
+from multiformats import CID
+from multiformats.multihash import digest
+from PIL import Image
 
 import argparse
 import json
@@ -222,11 +225,32 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
         file_meta_data['manifest:filePath'] = filename           
         file_meta_data['manifest:mimeType'] = get_mime_type(data_type, '')
     else:        
-        relative_path = filename.relative_to(abs_data_path)
-        file_meta_data['manifest:filePath'] = "./" + relative_path.as_posix()
-        file_meta_data['manifest:filename'] = relative_path.name
+        relative_path = filename.relative_to(abs_data_path)        
+        file_meta_data['manifest:filename'] = relative_path.name            
+
         if os.path.exists(filename):
-            file_meta_data['manifest:fileSize'] =  os.path.getsize(filename.as_posix())           
+            file_meta_data['manifest:fileSize'] =  os.path.getsize(filename.as_posix()) 
+            # create IPFS CIDv1 identifier   
+            with open(filename, "rb") as f:
+                data = f.read()
+            # create Multihash (SHA-256)
+            mh = digest(data, "sha2-256")       
+            # create CIDv1 with code "raw"
+            cid = CID("base32", 1, "raw", bytes(mh))
+            # convert in Base32 coded string
+            cid_str = cid.encode("base32")
+            file_meta_data['manifest:cid'] = cid_str            
+            file_meta_data['manifest:filePath'] = "ipfs://" + cid_str
+
+            if data_type == "isMedia" and filename.suffix.lstrip('.') == "png":
+                img = Image.open(filename)
+                width, height = img.size
+                dimesion_group = {}
+                dimesion_group["manifest:unit"] = "pixels"
+                dimesion_group["manifest:width"] = width
+                dimesion_group["manifest:height"] = height
+                file_meta_data['manifest:hasDimensions'] = dimesion_group
+                
         file_meta_data['manifest:mimeType'] = get_mime_type(data_type, relative_path.suffix.lstrip('.'))
     
     return file_data

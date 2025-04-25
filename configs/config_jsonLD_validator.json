@@ -4,6 +4,9 @@
 	"data folder" : "metadata",
 	"params" : 	{
 		"call" : "jsonLD_validator/main.py",
-		"input" : {"" : "{path}/{sub_path}/{asset_type}_instance.json"}
+		"input" : {"" : "{path}/{sub_path}/{asset_type}_instance.json"},
+        "additional" : {
+			"-closed" : ""
+		}	
 	}
 }

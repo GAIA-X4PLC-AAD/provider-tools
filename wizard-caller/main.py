@@ -7,7 +7,7 @@ import requests
 import shutil
 import os
 
-DEBUG = False
+DEBUG = True
 
 def trigger_open_sd_wizard(endpoint_url):
     try:

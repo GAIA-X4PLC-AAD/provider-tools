@@ -5,6 +5,7 @@ import json
 import logging
 import extractor
 
+version = 'v4'
 
 def get_meta_data(file_data: dict, attributes: dict):
     if 'project' in file_data:
@@ -48,7 +49,7 @@ def extract_meta_data(file: Path) ->Tuple[bool, dict]:
     
     data = {}
     data['did'] = 'did:web:registry.gaia-x.eu:EnvironmentModel:' + extractor.generate_global_unique_id()
-    data['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
+    data['shacle_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     data[f'{get_namespace()}:{get_schema_name().lower()}'] = attributes
     
     logging.info(f'Extract from file {file}')
@@ -61,4 +62,4 @@ def get_schema_name() -> str:
     return 'environmentModel'
 
 def get_namespace() -> str:
-    return 'environment-model'
+    return f'https://ontologies.envited-x.net/environment-model/{version}/ontology'

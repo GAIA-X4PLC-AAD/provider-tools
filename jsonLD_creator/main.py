@@ -15,18 +15,17 @@ from rdflib import Graph, URIRef, BNode
 from rdflib.collection import Collection
 from collections import defaultdict
 from pathlib import Path
-from urllib.parse import urlparse
 from typing import Tuple, Union, Dict, List
+from utils.utils import download_shacle, get_url_for_download, get_prefixes
 
 import shutil
 import json
 import logging
 import argparse
-import requests
 import operator
 
 
-DEBUG = True
+DEBUG = False
 if DEBUG:
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)s - %(message)s')
 else:
@@ -361,6 +360,10 @@ def register_list(key : str, values : dict, meta_data: dict, nodes : list, names
 
 # process node with all props and sub nodes
 def process_node(shape_value: list, meta_data: Union[Dict, List], nodes_in: list, lsonLD_dict: dict, level : int):
+    if not isinstance(shape_value, list):
+        logging.error(f'shape_value should be a list!')
+        exit(1)
+    
     handle_node =[]
     for values in shape_value:
         path, nodes = get_node_data(values)
@@ -448,6 +451,9 @@ def process_graph(schema_namespace, schema_name, meta_data):
 
         # get first element of main shacle        
         shape_value = get_shacle_shape(schema_namespace, schema_name)
+        if not shape_value:
+            logging.error(f'did not found {schema_name} in shacl {schema_namespace}!')
+            exit(1)
         process_node(shape_value, meta_data, None, config.JSON_OUT, 0)
 
         # end end remove envited-x prefix
@@ -507,27 +513,6 @@ def convert_graph_to_dict(graph, search_node_shape: bool):
     return graph_dict
 
 
-# download shacl from url
-def download_shacle(url_path : str, shacle_name: str) -> Path:
-    filename = f'{shacle_name}_shacl.ttl'
-    subfolder = 'shacles'    
-    local_filepath = Path(f'{subfolder}/{filename}')
-
-    if not local_filepath.exists():
-        # get file from github
-        url = f'{url_path}{filename}' if str(url_path).startswith(g_envited_url) else url_path
-        response = requests.get(url)
-        if not response:
-            logging.error(f'No shacl files found in url: {url}')
-            exit(1)
-
-        if not Path(subfolder).exists():
-            Path(subfolder).mkdir()
-        with open(local_filepath, 'wb') as file:
-            file.write(response.content) 
-
-    return local_filepath
-
 # create shacl data structure and register
 def register_shacle(url_path : str, shacle_name: str, shacls):
 
@@ -554,26 +539,6 @@ def register_shacle(url_path : str, shacle_name: str, shacls):
     except:
         logging.exception(f'cannot read turtle file: {local_file_path}')
         exit(1)
-
-
-# replace url with raw.githubusercontent.com
-def get_url_for_download(url: str) -> str:
-    
-    is_gaiax_ontology = True if str(url).startswith(g_envited_url) else False
-    if is_gaiax_ontology:
-        # Break the old URL into components
-        parsed = urlparse(url)
-        # Split the path into individual segments (empty parts are removed)
-        segments = [seg for seg in parsed.path.split("/") if seg]
-        
-        if segments:
-            name = segments[0]
-            # Create the new URL: new server, /main/, then the extracted name
-            new_url = f"{g_gaiax_server}/main/{name}/{name}_shacl.ttl"
-            return new_url
-    else:
-        # If no path segments were found, return the new server
-        return url.replace('#', '.ttl')
 
 
 def main():
@@ -607,11 +572,7 @@ def main():
 
     # get gaiaX/envited prefixes
     shacl_data = shacl_definitions[shacle_namespace]
-    prefixes = {
-            prefix: str(namespace) 
-            for prefix, namespace in shacl_data['graph'].namespace_manager.namespaces() 
-            if str(namespace).startswith(g_envited_url)
-    }
+    prefixes = get_prefixes(shacl_data['graph'])
     # add sh prefix
     prefixes["sh"] = g_sh_url
 

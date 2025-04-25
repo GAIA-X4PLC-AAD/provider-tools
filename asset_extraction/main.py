@@ -127,15 +127,20 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
     # run
     try:
         #logging.info(script_call)
-        logging.info(f"start command {script_config['name']}")
+        logging.info(f">>>>>>>>>>>>>>>>>>>  start command {script_config['name']}")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        logging.info(f"end command {script_config['name']} succeeded with output:")
-        logging.info(result.stdout)  # print default output from sub process
-        logging.info(result.stderr)  # print logging output from sub process
+        if result.stdout or result.stderr:
+            logging.info(f" === command {script_config['name']} succeeded with output:")        
+            logging.info(result.stdout)  # print default output from sub process
+            logging.info(result.stderr)  # print logging output from sub process        
+        logging.info(f"<<<<<<<<<<<<<<<<<<< end command {script_config['name']}")
+        logging.info("")
+        logging.info("")
     except subprocess.CalledProcessError as e:
-        logging.error(f"Command {script_config['name']} failed with return code {e.returncode}")
+        logging.error(f"!!!!!!!!!!!! Command {script_config['name']} failed with return code {e.returncode}")
         logging.error(f"Error output: {e.stderr}")
         logging.error(f"Error output: {e.stdout}")
+        logging.error(f"!!!!!!!!!!!!!!!!!!!!!!!!")
         exit(1)
 
 

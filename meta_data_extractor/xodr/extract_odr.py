@@ -8,6 +8,8 @@ from extractor import get_position_from_osm, proj4_to_epsg, convert_to_LatLon
 import logging
 import extractor
 
+version = 'v4'
+
 
 def container_in_str(data: any) -> str:
     string = ''
@@ -217,7 +219,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     
     meta_data_dict = dict()
     meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:HdMap:' + extractor.generate_global_unique_id()
-    meta_data_dict['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
+    meta_data_dict['shacle_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     meta_data_dict[f'{get_schema_name().lower()}:hasDataResource'] = hasDataResource_dict    
 
     hasDataResourceExtension_dict = dict()
@@ -413,4 +415,4 @@ def get_schema_name() -> str:
     return 'HdMap'
 
 def get_namespace() -> str:
-    return 'hdmap'
+    return f'https://ontologies.envited-x.net/{get_schema_name().lower()}/{version}/ontology'

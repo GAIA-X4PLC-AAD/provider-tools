@@ -7,8 +7,7 @@
 		"input" : {"" : "{path}/temp/{name}_extractor.json"},
 		"output" : {"-out" : "{path}/{sub_path}/{asset_type}_instance.json"},
 		"additional" : {
-			"-ontology" : "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main",
-            "-removeShacl" : ""            
+			"-ontology" : "https://ontologies.envited-x.net/hdmap/v4/ontology"
 		}		
 	}
 }

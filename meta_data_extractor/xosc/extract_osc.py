@@ -13,12 +13,12 @@ import uuid
 import os
 import extractor
 
-
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s.%(msecs)03d [%(levelname)5s-%(name)s] {%(module)s -> %(funcName)s} %(message)s',
                     datefmt='%d/%m/%Y %H:%M:%S')
 logging.getLogger(__name__).setLevel(logging.DEBUG)
 
+version = 'v4'
 
 SCRIPT_NAME = Path(__file__).name
 IMPLEMENTED_OPENLABEL_TAGS = [
@@ -1411,7 +1411,7 @@ def get_meta_data(osc: OpenSCENARIO, file_path: Path, default_value: str = "Unkn
     
     meta_data_dict = dict()
     meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:Scenario:' + extractor.generate_global_unique_id()
-    meta_data_dict['shacle_type'] = f'{get_namespace()}:{get_schema_name()}'
+    meta_data_dict['shacle_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     get_general_meta_data(meta_data_dict, osc, file_path, default_value, unknown_unit)
     get_osc_meta_data(meta_data_dict, osc, file_path, default_value, unknown_unit)
 
@@ -1452,4 +1452,4 @@ def get_schema_name() -> str:
     return 'Scenario'
 
 def get_namespace() -> str:
-    return 'scenario'
+    return f'https://ontologies.envited-x.net/{get_schema_name().lower()}/{version}/ontology'

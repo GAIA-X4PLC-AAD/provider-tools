@@ -14,6 +14,10 @@ import requests
 import secrets
 import string
 
+g_envitedX = 'envited-x'
+g_envited_url = 'https://ontologies.envited-x.net/'
+g_version = 'v2'
+
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 categories = {
@@ -301,7 +305,7 @@ def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path
         if category == 'isMetadata':
             file_entry['manifest:iri'] = asset_did
             file_entry['skos:note'] = f'This is the domain metadata for a {asset_data["type"]}.'
-            file_entry['sh:conformsTo'] = [f'https://ontologies.envited-x.net//{asset_data["classname"]}/v3/ontology']
+            file_entry['sh:conformsTo'] = [f'{g_envited_url}{asset_data["classname"]}/{g_version}/ontology']
                      
         data.append(file_entry)
 
@@ -490,7 +494,7 @@ def main():
     # create json file for jsonLD creator
     data = {}
     data['did'] = 'did:web:registry.gaia-x.eu:Manifest:' + generate_global_unique_id()
-    data['shacle_type'] = 'envited-x::https://ontologies.envited-x.net/envited-x/v2/ontology#ManifestShape'
+    data['shacle_type'] = f'{g_envitedX}::{g_envited_url}{g_envitedX}/{g_version}/ontology#ManifestShape'
     data_group = []
     data['manifest:hasArtifacts'] = data_group
     for sub_folder in data_path.iterdir():

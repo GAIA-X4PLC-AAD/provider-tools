@@ -1,38 +1,15 @@
 from pathlib import Path
 from pyshacl import validate
-from rdflib.namespace import SH
+from rdflib.namespace import SH, RDF
 from rdflib import Graph, Literal
+from utils.utils import download_shacle, get_url_for_download, get_prefixes, load_shacl_files, load_jsonld_file
 
-import sys
-import json
 import argparse
-import requests
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 
 gaiax_url_part = 'GAIA-X4PLC-AAD/ontology-management-base'
-
-def load_shacl_files(root_dir):
-    shacl_graph = Graph()
-    shacl_files = sorted(root_dir.glob('*_shacl.ttl'))
-    for shacl_file in shacl_files:
-        shacl_graph.parse(shacl_file, format='turtle')
-    return shacl_graph
-
-
-def load_jsonld_file(jsonld_file : Path):
-
-    if not jsonld_file.exists():
-        logging.error(f'JsonLD files not found: {jsonld_file}')
-        exit(1)  
-
-    data_graph = Graph()
-    logging.info(f'adding jsonld file to data graph: {jsonld_file}.')
-    with open(jsonld_file) as f:
-        data = json.load(f)
-    data_graph.parse(data=json.dumps(data), format='json-ld')
-    return data_graph
 
 
 def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
@@ -47,32 +24,25 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
     logging.info(f'Conforms: {conforms}')
     if not conforms:
         logging.error('####### Validation errors: #######')
-        logging.error(v_text)
-        #sys.exit(400)        
+        #logging.error(v_text)        
+        # Iterate over all ValidationResult nodes
+        for result in v_graph.subjects(RDF.type, SH.ValidationResult):
+            # Extract severity (e.g., Violation or Warning)
+            sev = v_graph.value(result, SH.resultSeverity)
+            # Extract the focus node where the violation occurred
+            #focus = v_graph.value(result, SH.focusNode)
+            # Extract the path/property that failed
+            path = v_graph.value(result, SH.resultPath)
+            # Extract the human-readable message
+            message = v_graph.value(result, SH.resultMessage)
 
-def get_shacl_urls_from_data(data_graph: Graph ):
-    # get gaia x prefixes
-    prefixes = {prefix: str(namespace) for prefix, namespace in data_graph.namespace_manager.namespaces() if gaiax_url_part in str(namespace)}
-    return prefixes
-
-def download_shacle(url_path : str, shacle_name: str, folder : Path) -> str:
-    filename = f'{shacle_name}_shacl.ttl'
-    local_file_path = f'{folder}/{filename}'
-
-    if not Path(local_file_path).exists():
-        # replace github link ro raw data link
-        new_url_path = url_path.replace('https://github.com/', 'https://raw.githubusercontent.com/')
-        new_url_path = new_url_path.replace('/blob', '')
-        new_url_path = new_url_path.replace('/tree', '')
-        url = f'{new_url_path}{filename}'
-        response = requests.get(url)
-        if not response:
-            logging.error(f'No shacl files found in url: {url}')
-            exit(1)            
-        with open(local_file_path, 'wb') as file:
-            file.write(response.content) 
-
-    return local_file_path
+            # Log a structured, one-line summary of each result
+            logging.error(
+                "-> [%s] Path=%s\n   : %s",
+                sev.split('#')[-1] if sev else "UnknownSeverity",
+                path or "(no path)",
+                message or "(no message)"
+            )    
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='validate jsonLD against shacls')
@@ -87,11 +57,13 @@ def main():
     # load shacls
     shacl_folder = Path(__file__).parent.resolve() / 'shacles'
     if not shacl_folder.exists():
-        shacl_folder.mkdir()        
-    prefixes = get_shacl_urls_from_data(data_graph)
+        shacl_folder.mkdir()   
+    prefixes = get_prefixes(data_graph)
+    shacl_files = []
     for key, value in prefixes.items():
-        download_shacle(value, key, shacl_folder)
-    shacl_graph = load_shacl_files(shacl_folder)
+        new_url_path = get_url_for_download(value)
+        shacl_files.append(download_shacle(new_url_path, key))
+    shacl_graph = load_shacl_files(shacl_files)
 
     # find all closed tags and set to True
     if args.closed:

@@ -1,6 +1,6 @@
 from pathlib import Path
 from pyshacl import validate
-from rdflib.namespace import RDF, SH
+from rdflib.namespace import SH
 from rdflib import Graph, Literal
 
 import sys

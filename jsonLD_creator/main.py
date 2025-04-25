@@ -11,7 +11,7 @@
 
 from datetime import datetime
 from rdflib.namespace import SH, RDF
-from rdflib import Graph, URIRef, Namespace, BNode
+from rdflib import Graph, URIRef, BNode
 from rdflib.collection import Collection
 from collections import defaultdict
 from pathlib import Path
@@ -25,11 +25,21 @@ import argparse
 import requests
 import operator
 
+
 DEBUG = True
 if DEBUG:
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)s - %(message)s')
 else:
     logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+
+
+# global values
+g_sh_url = 'http://www.w3.org/ns/shacl#'
+g_envited_x_str = 'envited-x'
+g_envited_url = 'https://ontologies.envited-x.net'
+g_w3_url = 'http://www.w3.org'
+g_gaiax_server = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base"
+
 
 # global config value with all shacles, dicts and jsonLD output
 class Config:
@@ -97,7 +107,7 @@ def is_list_property(shacl_data):
 def get_value(name, values):
     name_pre = '#' + name
     for key, data in values.items():
-        if name_pre in key:
+        if str(key).endswith(name_pre):
             return data
     return None
 
@@ -106,8 +116,10 @@ def get_value(name, values):
 def get_node_data(values) -> Tuple[str, list]:
     node_paths = []
     path_data = get_value("path", values)
+
     if path_data == 'manifest:hasLicense':
         test = 0
+
     for key, data in values.items():        
         if 'qualifiedValueShape' in key:
             node_data = get_value("node", data)
@@ -135,6 +147,33 @@ def get_node_data(values) -> Tuple[str, list]:
     return path_data, None
 
 
+# detect value type (@value or @id) from shacl_values (Literal or IRI node)
+def get_value_type(key : str, shacl_values : dict) -> str:
+    literal_constraints = [
+        "datatype", "pattern", "in",
+        "minLength", "maxLength",
+        "length",
+        "minInclusive", "maxInclusive",
+        "minExclusive", "maxExclusive",
+        "languageIn"
+    ]
+    #object_constraints = ["class", "node", "nodeKind"]
+    value_key = (
+        "@value"
+        if any(get_value(name, shacl_values) for name in literal_constraints)
+        else "@id"
+    )    
+
+    # unit test
+    if key == 'gx:license' and value_key != "@value":
+        value_key = "@value" # no idea how to handle this via shacl values
+    if key == 'manifest:hasAccessRole' and value_key != "@id":
+        value_key = "@id"        
+    if key == 'manifest:hasCategory' and value_key != "@id":
+        value_key = "@id" 
+    return value_key
+
+
 # create property like
 # "hdmap:elevationRange": {
 #       "@value": "5.6",
@@ -145,22 +184,32 @@ def get_node_data(values) -> Tuple[str, list]:
 #      "@type": "manifest:AccessRole",
 #      "@id": "envited-x:isPublic"
 # }
-def create_property(namespace : str, property_name : str, value: str, type: str, name: str, lsonLD_dict: dict, level : int):
+def create_property(namespace : str, property_name : str, value, type: str, name: str, lsonLD_dict: dict, shacl_values : dict, level : int):
     key = create_namespace_name(namespace, property_name)
     # debug
-    if key == 'gx:license':
+    if key == 'manifest:hasAccessRole':
         test = 0
 
-    property = {}
-    if type:
-        property['@type'] = f'xsd:{type}'
-        property['@value'] = value
+    value_key = get_value_type(key, shacl_values)
+
+    property = None
+    if isinstance(value, list):
+        property = []
+        for list_value in value:
+            property_list = {}
+            property_list[value_key] = list_value
+            property.append(property_list)
     else:
-        if name is not None:
-            property['@type'] = name
-            property['@id'] = value
+        property = {}
+        if type:
+            property['@type'] = f'xsd:{type}'
+            property[value_key] = value # value
         else:
-            property['@value'] = value
+            if name is not None:
+                property['@type'] = name
+                property[value_key] = value # id
+            else:
+                property[value_key] = value # value
        
     lsonLD_dict[key] = property
     logging.debug(f'{" " * level * 3}add prop {key}')
@@ -226,13 +275,11 @@ def create_node(namespace : str, shapename : str, type: str, lsonLD: Union[Dict,
 def get_shacle_shema(namespace : str) -> dict:
     if namespace in config.SHACLS:
         return config.SHACLS[namespace]
-    #logging.error(f'{namespace} not found!')
-    #exit(1)
     return None
 
 
 # get shape from shacle data
-def get_shacle_shape(namespace : str, shapename : str) -> dict:
+def get_shacle_shape(namespace : str, shapename : str) -> list:
     shacl_graph_data = get_shacle_shema(namespace)
     if shacl_graph_data:
         if shapename in shacl_graph_data['dict']:
@@ -241,24 +288,20 @@ def get_shacle_shape(namespace : str, shapename : str) -> dict:
     return None
 
 # register key + value to json ld
-def register_key(key : str, value, meta_data: dict, nodes : list, namespace: str, shapename: str, path: str, is_required: bool, lsonLD_dict: dict, level : int):
+def register_key(key : str, values : dict, meta_data: dict, nodes : list, namespace: str, shapename: str, path: str, is_required: bool, lsonLD_dict: dict, level : int):
     if key in meta_data:
-        if isinstance(meta_data[key], list):
-            logging.error(f'meta_data of {key} should be dict or str!')
-            exit(1)
-
         if nodes is None:
             # register as property
             namespace_sub, name_subtype = get_namespace_name_from_url(path)
-            type_url = get_value("datatype", value)
+            type_url = get_value("datatype", values)
             if type_url:
                 namespace_type, type = get_namespace_name_from_url(type_url)
-                create_property(namespace, shapename, meta_data[key], type, None, lsonLD_dict, level)
+                create_property(namespace, shapename, meta_data[key], type, None, lsonLD_dict, values, level)
             else:
-                name_url = get_value("name", value)
-                name = get_name_from_url(name_url)
+                name_url = get_value("name", values)
+                name = get_name_from_url(name_url) if name_url else None
                 property_name = create_namespace_name(namespace, name) if name is not None else None
-                create_property(namespace, shapename, meta_data[key], None, property_name, lsonLD_dict, level)
+                create_property(namespace, shapename, meta_data[key], None, property_name, lsonLD_dict, values, level)
         else:
             created_node = None
             for node in nodes:
@@ -274,7 +317,7 @@ def register_key(key : str, value, meta_data: dict, nodes : list, namespace: str
 
                 # go deeper
                 nodes_sub = list(node.values())[0] if isinstance(node, dict) else None
-                lsonLD_node = created_node# if isinstance(meta_data[key], dict) else lsonLD_dict
+                lsonLD_node = created_node
                 process_node(shape_value_sub, meta_data[key], nodes_sub, lsonLD_node, level + 1)
 
 
@@ -283,7 +326,7 @@ def register_key(key : str, value, meta_data: dict, nodes : list, namespace: str
         test = 0
 
 # register list of key + value to json ld
-def register_list(key : str, value, meta_data: list, nodes : list, namespace: str, shapename: str, path: str, is_required: bool, lsonLD_dict: dict, level : int):
+def register_list(key : str, values : dict, meta_data: dict, nodes : list, namespace: str, shapename: str, path: str, is_required: bool, lsonLD_dict: dict, level : int):
     if key in meta_data:
         if not isinstance(meta_data[key], list):
             logging.error(f'meta_data of {key} should be list!')
@@ -292,48 +335,53 @@ def register_list(key : str, value, meta_data: list, nodes : list, namespace: st
         created_nodes = []
         for sub_meta_data in meta_data[key]:
             created_node = None
-            for node in nodes:
-                namespace_sub, type = get_namespace_name_from_url(node)
-                shape_value_sub = get_shacle_shape(namespace_sub, str(node))
-                if shape_value_sub is None:
-                    continue
-                
-                if created_node is None:
-                    created_node = create_node(namespace_sub, shapename, type, created_nodes, True, level)
-                # only subnodes / properties of further nodes are registered
+            if nodes:
+                for node in nodes:
+                    namespace_sub, type = get_namespace_name_from_url(node)
+                    shape_value_sub = get_shacle_shape(namespace_sub, str(node))
+                    if shape_value_sub is None:
+                        continue
+                    
+                    if created_node is None:
+                        created_node = create_node(namespace_sub, shapename, type, created_nodes, True, level)
+                    # only subnodes / properties of further nodes are registered
 
-                # go deeper
-                process_node(shape_value_sub, sub_meta_data, None, created_node, level + 1)   
+                    # go deeper
+                    process_node(shape_value_sub, sub_meta_data, None, created_node, level + 1)   
+            else:
+                # register as property
+                register_key(key, values, meta_data, None, namespace, shapename, path, is_required, lsonLD_dict, level)   
 
-        lsonLD_dict[key] = created_nodes
+        if created_nodes:
+            lsonLD_dict[key] = created_nodes
 
     elif is_required:
         # TODO write empty node
         test = 0        
 
 # process node with all props and sub nodes
-def process_node(shape_value: dict, meta_data: Union[Dict, List], nodes_in: list, lsonLD_dict: dict, level : int):
+def process_node(shape_value: list, meta_data: Union[Dict, List], nodes_in: list, lsonLD_dict: dict, level : int):
     handle_node =[]
-    for value in shape_value:
-        path, nodes = get_node_data(value)
+    for values in shape_value:
+        path, nodes = get_node_data(values)
         namespace, shapename = get_namespace_name_from_url(path)
         key = create_namespace_name(namespace, shapename)
 
         # if node value in node in -> use nodes_in
         if nodes_in is not None:
-            node_value = get_value("node", value)
+            node_value = get_value("node", values)
             matching_uri = next((uri for uri in nodes_in if str(uri) == node_value), None)
             if matching_uri is not None:
                 nodes = nodes_in
 
-        is_required = is_required_property(value)
-        is_list = is_list_property(value)
+        is_required = is_required_property(values)
+        is_list = is_list_property(values)
         if is_list:
             if not key in handle_node: # register key only one time : e.g hasArtifacts exist for multiple types via sh:hasValue envited-x:isSimulationData
-                register_list(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
+                register_list(key, values, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
                 handle_node.append(key)
         else:
-            register_key(key, value, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
+            register_key(key, values, meta_data, nodes, namespace, shapename, path, is_required, lsonLD_dict, level)
 
 
 # get prefix from url
@@ -373,9 +421,7 @@ def getPrefixes(shacl_graph):
         uriStr = str(namespace)
         if uriStr in used_namespaces:
             prefix_str = get_prefix_for_url(namespace, shacl_graph)
-            prefixes[prefix_str] = namespace
-    # add gx prefix
-    prefixes["gx"] = Namespace("https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#")              
+            prefixes[prefix_str] = namespace            
     return prefixes
 
 
@@ -397,7 +443,7 @@ def process_graph(schema_namespace, schema_name, meta_data):
             exit(1)
         name = get_name_from_url(schema_name)
         name = name.replace('Shape', '')
-        shacle_namespace = 'manifest' if schema_namespace == 'envited-x' else schema_namespace
+        shacle_namespace = 'manifest' if schema_namespace == g_envited_x_str else schema_namespace
         config.JSON_OUT['@type'] = create_namespace_name(shacle_namespace, name)
 
         # get first element of main shacle        
@@ -405,8 +451,8 @@ def process_graph(schema_namespace, schema_name, meta_data):
         process_node(shape_value, meta_data, None, config.JSON_OUT, 0)
 
         # end end remove envited-x prefix
-        if 'envited-x' in config.JSON_OUT['@context']:
-            del config.JSON_OUT['@context']['envited-x']        
+        if g_envited_x_str in config.JSON_OUT['@context']:
+            del config.JSON_OUT['@context'][g_envited_x_str]        
     else:
         logging.error(f'Cannot find ontology {schema_namespace}')
     
@@ -443,9 +489,10 @@ def convert_bnode_to_dict(graph, bnode):
 
 
 # convert rdf graph to dict, resolve blank nodes
-def convert_graph_to_dict(graph):
+def convert_graph_to_dict(graph, search_node_shape: bool):
     graph_dict = {}
-    for node_shape in graph.subjects(RDF.type, SH.NodeShape):
+    type_to_search = SH.NodeShape if search_node_shape else SH.NodeKind
+    for node_shape in graph.subjects(RDF.type, type_to_search):
 
         prop_list = []
         for prop in graph.objects(node_shape, SH.property):    
@@ -468,7 +515,7 @@ def download_shacle(url_path : str, shacle_name: str) -> Path:
 
     if not local_filepath.exists():
         # get file from github
-        url = f'{url_path}{filename}'
+        url = f'{url_path}{filename}' if str(url_path).startswith(g_envited_url) else url_path
         response = requests.get(url)
         if not response:
             logging.error(f'No shacl files found in url: {url}')
@@ -487,42 +534,46 @@ def register_shacle(url_path : str, shacle_name: str, shacls):
     local_file_path = download_shacle(url_path, shacle_name)
 
     try:
-        graph = Graph()
-        graph.parse(local_file_path, format='turtle')
-        
-        graph_data = {}
-        graph_data['graph'] = graph
-        graph_data['dict'] = convert_graph_to_dict(graph)        
-        graph_data['prefixes'] = getPrefixes(graph)
+        if local_file_path:
+            graph = Graph()
+            graph.parse(local_file_path, format='turtle')
+            
+            is_gaiax_ontology = True if str(url_path).startswith(g_gaiax_server) else False
 
-        # debug write as json
-        debug_json_file = local_file_path.with_suffix(".json")
-        with open(debug_json_file, 'w') as f:
-            json.dump(graph_data['dict'], f, indent=2, default=datetime_handler)
+            graph_data = {}
+            graph_data['graph'] = graph
+            graph_data['dict'] = convert_graph_to_dict(graph, is_gaiax_ontology)        
+            graph_data['prefixes'] = getPrefixes(graph)
 
-        shacls[shacle_name] = graph_data
+            # debug write as json
+            debug_json_file = local_file_path.with_suffix(".json")
+            with open(debug_json_file, 'w') as f:
+                json.dump(graph_data['dict'], f, indent=2, default=datetime_handler)
+
+            shacls[shacle_name] = graph_data
     except:
         logging.exception(f'cannot read turtle file: {local_file_path}')
         exit(1)
 
 
 # replace url with raw.githubusercontent.com
-def get_url_for_download(url):
-    new_server = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base"
+def get_url_for_download(url: str) -> str:
     
-    # Break the old URL into components
-    parsed = urlparse(url)
-    # Split the path into individual segments (empty parts are removed)
-    segments = [seg for seg in parsed.path.split("/") if seg]
-    
-    if segments:
-        name = segments[0]
-        # Create the new URL: new server, /main/, then the extracted name
-        new_url = f"{new_server}/main/{name}/"
-        return new_url
+    is_gaiax_ontology = True if str(url).startswith(g_envited_url) else False
+    if is_gaiax_ontology:
+        # Break the old URL into components
+        parsed = urlparse(url)
+        # Split the path into individual segments (empty parts are removed)
+        segments = [seg for seg in parsed.path.split("/") if seg]
+        
+        if segments:
+            name = segments[0]
+            # Create the new URL: new server, /main/, then the extracted name
+            new_url = f"{g_gaiax_server}/main/{name}/shacl.ttl"
+            return new_url
     else:
         # If no path segments were found, return the new server
-        return new_server 
+        return url.replace('#', '.ttl')
 
 
 def main():
@@ -554,13 +605,14 @@ def main():
     register_shacle(url_path, shacle_namespace, shacl_definitions)
 
     # get gaiaX/envited prefixes
-    envited_url = 'https://ontologies.envited-x.net'
     shacl_data = shacl_definitions[shacle_namespace]
     prefixes = {
             prefix: str(namespace) 
             for prefix, namespace in shacl_data['graph'].namespace_manager.namespaces() 
-            if str(namespace).startswith(envited_url)
+            if str(namespace).startswith(g_envited_url)
     }
+    # add sh prefix
+    prefixes["sh"] = g_sh_url
 
     # and download additional shacles
     for key, value in prefixes.items():

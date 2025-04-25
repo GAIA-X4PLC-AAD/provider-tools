@@ -4,6 +4,7 @@ from multiformats import CID
 from multiformats.multihash import digest
 from PIL import Image
 
+import re
 import argparse
 import json
 import shutil
@@ -220,9 +221,8 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
     file_data['manifest:hasCategory'] = 'manifest:' + data_type
     file_meta_data = dict()
     file_data['manifest:hasFileMetadata'] =  file_meta_data
-    file_is_url = is_url(str(filename))
-    if file_is_url:
-        file_meta_data['manifest:filePath'] = filename           
+    if is_url(filename):
+        file_meta_data['manifest:filePath'] = url_from_path(filename)
         file_meta_data['manifest:mimeType'] = get_mime_type(data_type, '')
     else:        
         relative_path = filename.relative_to(abs_data_path)        
@@ -298,11 +298,10 @@ def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path
 
         # add to json data
         file_entry = create_file_data(filename, abs_data_path, category, role)
-        #if category == 'isMetadata':
-        #    file_entry['manifest:iri'] = asset_did
-        #    file_entry['skos:note'] = f'This is the domain metadata for a {asset_data["type"]}.'
-        #    file_entry['sh:conformsTo'] = [f'https://ontologies.envited-x.net//{asset_data["classname"]}/v3/ontology']
-        #    test = 0
+        if category == 'isMetadata':
+            file_entry['manifest:iri'] = asset_did
+            file_entry['skos:note'] = f'This is the domain metadata for a {asset_data["type"]}.'
+            file_entry['sh:conformsTo'] = [f'https://ontologies.envited-x.net//{asset_data["classname"]}/v3/ontology']
                      
         data.append(file_entry)
 
@@ -329,10 +328,22 @@ def create_filename(filename: Path, asset_name: Path, file_data : dict, index : 
     filename_new = f"{basename}{extension}"
     return Path(filename_new)
 
-def is_url(string):
-    parsed = urlparse(string)
+def url_from_path(path: Path) -> str:
+    s = path.as_posix()
+    # from 'http:/example.com' to 'http://example.com'
+    s = re.sub(
+        r'^(?P<scheme>https?):/+',
+        lambda m: f"{m.group('scheme')}://",
+        s,
+        flags=re.IGNORECASE
+    )
+    return s
+
+def is_url(path: Path):
+    url = url_from_path(path)
+    parsed = urlparse(url)
     # A URL usually has a scheme (e.g. “http”, “https”) and a “netloc” (e.g. “www.example.com”)
-    return all([parsed.scheme, parsed.netloc])
+    return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
 
 
 def update_readme(file_path_in: Path, file_path_out: Path, name_value: str, description_value: str) -> None:
@@ -437,9 +448,11 @@ def main():
     if asset_extension in asset_type:        
         asset_data = asset_type[asset_extension]
         asset_did = f'did:web:registry.gaia-x.eu:{asset_data["category"]}:{generate_global_unique_id()}'
+
     # copy files
     upload_folder = user_input_file.parent
     indexImage = 1
+    license_data = None
     for file in user_data:
         filename = Path(file['filename'])
 
@@ -451,23 +464,28 @@ def main():
             logging.error(f'type {typ} not found in category {category}')
             exit(1)
 
-        # get dest name
-        dest_name = filename.name
-        dest_name = create_filename(Path(dest_name), asset_name, cat_type_data, indexImage)        
-        if category == "visualization" and typ == 'Image':
-            indexImage = indexImage + 1 # increase image index for image mask
+        if not is_url(filename):      
+            # get dest name
+            dest_name = filename.name
+            dest_name = create_filename(Path(dest_name), asset_name, cat_type_data, indexImage)        
+            if category == "visualization" and typ == 'Image':
+                indexImage = indexImage + 1 # increase image index for image mask
 
-        # destination filename
-        dest = Path(data_path / cat_type_data["folder"])
-        if not dest.exists():
-            dest.mkdir()
-        dest = dest /  dest_name    
-        dest = dest.resolve()    
-        # source filename
-        source = upload_folder / filename
-        source = source.resolve()
-        # copy
-        shutil.copy(source, dest)
+            # destination filename
+            dest = Path(data_path / cat_type_data["folder"])
+            if not dest.exists():
+                dest.mkdir()
+            dest = dest /  dest_name    
+            dest = dest.resolve()    
+            # source filename
+            source = upload_folder / filename
+            source = source.resolve()
+            # copy        
+            shutil.copy(source, dest)
+
+        if 'license_type' in file:
+            license_data = {}
+            license_data = file
 
     # create json file for jsonLD creator
     data = {}
@@ -483,14 +501,14 @@ def main():
 
     # register license
     # TODO get license from file or user input link/type
-    license_file = 'https://www.mozilla.org/en-US/MPL/2.0/'
-    if license_file is not None:
+    #license_file = Path('https://www.mozilla.org/en-US/MPL/2.0/')
+    if license_data is not None:
         licence_group = {}        
-        licence_group['gx:license'] = 'MPL-2.0'
+        licence_group['gx:license'] = license_data['license_type']
         data['manifest:hasLicense'] = licence_group
         hasLink_group = {}
         licence_group['manifest:hasLink'] = hasLink_group
-        register_asset(hasLink_group, license_file, data_path, 'isLicense', 'isPublic')        
+        register_asset(hasLink_group, Path(license_data['filename']), data_path, 'isLicense', 'isPublic')        
         
     # register manifest
     manifest_group = {}

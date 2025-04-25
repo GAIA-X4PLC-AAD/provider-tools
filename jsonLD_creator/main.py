@@ -569,7 +569,7 @@ def get_url_for_download(url: str) -> str:
         if segments:
             name = segments[0]
             # Create the new URL: new server, /main/, then the extracted name
-            new_url = f"{g_gaiax_server}/main/{name}/shacl.ttl"
+            new_url = f"{g_gaiax_server}/main/{name}/{name}_shacl.ttl"
             return new_url
     else:
         # If no path segments were found, return the new server
@@ -602,7 +602,8 @@ def main():
     ontology_path = args.ontology + '/'
     shacl_definitions = {}
     url_path = f'{ontology_path}{shacle_namespace}/'
-    register_shacle(url_path, shacle_namespace, shacl_definitions)
+    new_url_path = get_url_for_download(url_path)
+    register_shacle(new_url_path, shacle_namespace, shacl_definitions)
 
     # get gaiaX/envited prefixes
     shacl_data = shacl_definitions[shacle_namespace]

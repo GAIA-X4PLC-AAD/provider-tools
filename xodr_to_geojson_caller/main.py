@@ -1,5 +1,6 @@
 from pathlib import Path
 from lxml import etree
+from utils.log_config import handle_output
 
 import argparse
 import subprocess
@@ -49,17 +50,14 @@ def main():
 
     script_call.append(new_temp_file.as_posix())
     script_call.append(filename_out.parent.as_posix())
-    print(script_call)
+    
     # run
     try:    
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        logger.info(f"end command succeeded with output:")
-        logger.info(result.stdout)  # print default output from sub process
-        logger.info(result.stderr)  # print logging output from sub process
+        handle_output(result, 'vcs-odr-converter')
     except subprocess.CalledProcessError as e:
         logger.error(f"Command failed with return code {e.returncode}")
-        logger.error(f"Error output: {e.stderr}")
-        logger.error(f"Error output: {e.stdout}")
+        handle_output(e, 'vcs-odr-converter')
         exit(1)
 
 if __name__ == '__main__':

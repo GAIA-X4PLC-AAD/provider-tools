@@ -17,13 +17,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Tuple, Union, Dict, List
 from utils.utils import download_shacle, get_url_for_download, get_prefixes
-
+#from utils.log_config import setup_logging # debug
 import shutil
 import json
 import logging
 import argparse
 import operator
 
+#setup_logging(logging.DEBUG) # debug
 logger = logging.getLogger(__name__)
 
 # global values
@@ -114,7 +115,7 @@ def collect_nodes(shape: Any) -> List[str]:
     if isinstance(shape, dict):
         for k, v in shape.items():
             # SHACL-node / SHACL-class
-            if k.endswith(f"{SHACL_NS}node") or k.endswith(f"{SHACL_NS}class"):
+            if k.endswith(f"{SHACL_NS}node"):
                 if isinstance(v, str):
                     nodes.append(v)
                 else:
@@ -139,7 +140,8 @@ def collect_nodes(shape: Any) -> List[str]:
     elif isinstance(shape, list):
         for item in shape:
             nodes.extend(collect_nodes(item))
-    # alles andere ignorieren
+    elif isinstance(shape, str):
+        nodes.append(shape)
     return nodes
 
 
@@ -193,7 +195,7 @@ def get_value_type(key : str, shacl_values : dict) -> str:
 def create_property(namespace : str, property_name : str, value, datatype: str, name: str, jsonLD_dict: dict, shacl_values : dict, level : int):
     key = create_namespace_name(namespace, property_name)
     # debug
-    if key == 'sh:conformsTo':
+    if key == 'manifest:filename':
         test = 0
 
     value_key = get_value_type(key, shacl_values)
@@ -220,6 +222,11 @@ def create_property(namespace : str, property_name : str, value, datatype: str, 
                 value_key : value} # id       
         else:
             jsonLD_dict[key] = {value_key : value}
+            class_value = get_value('class', shacl_values)
+            if class_value:
+                jsonLD_dict[key]['@type'] = f'{namespace}:{get_name_from_url(class_value)}'
+
+
        
     logger.debug(f'{" " * level * 3}add prop {key}')
 
@@ -324,6 +331,8 @@ def register_key(key : str, values : dict, meta_data: dict, nodes : list, namesp
         else:
             created_node = None
             for node in nodes:
+                if key not in meta_data:
+                    continue # already filled
                 ulr = node if isinstance(node, str) else list(node)[0]
                 namespace_sub, type = get_namespace_name_from_url(ulr)
                 shape_value_sub = get_shacle_shape(namespace_sub, str(ulr))
@@ -340,6 +349,7 @@ def register_key(key : str, values : dict, meta_data: dict, nodes : list, namesp
                 # go deeper
                 nodes_sub = list(node.values())[0] if isinstance(node, dict) else None
                 lsonLD_node = created_node
+
                 process_node(shape_value_sub, meta_data[key], nodes_sub, lsonLD_node, level + 1)
                 if not meta_data[key]:
                     del meta_data[key]
@@ -375,7 +385,10 @@ def register_list(key : str, values : dict, meta_data: dict, nodes : list, names
                     process_node(shape_value_sub, sub_meta_data, None, created_node, level + 1)   
             else:
                 # register as property
-                register_key(key, values, meta_data, None, namespace, shapename, path, is_required, lsonLD_dict, level)   
+                register_key(key, values, meta_data, None, namespace, shapename, path, is_required, lsonLD_dict, level) 
+
+        if key in meta_data and all(not elem for elem in meta_data[key]):   
+            del meta_data[key]
 
         if created_nodes:
             lsonLD_dict[key] = created_nodes
@@ -393,7 +406,7 @@ def process_node(shape_value: list, meta_data: Union[Dict, List], nodes_in: list
     handle_node =[]
     for values in shape_value:
         path_data = get_value("path", values)     
-        if path_data == 'https://ontologies.envited-x.net/hdmap/v4/ontology#hasManifest':
+        if path_data == 'https://ontologies.envited-x.net/manifest/v5/ontology#hasArtifacts':
             test = 0
         path, nodes = get_node_data(values)           
         namespace, shapename = get_namespace_name_from_url(path)
@@ -478,7 +491,7 @@ def process_graph(schema_namespace, schema_name, meta_data):
         # add type
         name = get_name_from_url(schema_name)
         name = name.replace('Shape', '')
-        shacle_namespace = 'manifest' if schema_namespace == g_envited_x_str else schema_namespace
+        shacle_namespace = 'manifest' if schema_namespace == g_envited_x_str and name != 'Manifest' else schema_namespace
         config.JSON_OUT['@type'] = create_namespace_name(shacle_namespace, name)
 
         # get first element of main shacle        

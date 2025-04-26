@@ -1,6 +1,6 @@
 from pathlib import Path
 from zipfile import ZipFile
-from utils.log_config import setup_logging
+from utils.log_config import setup_logging, handle_output
 
 import json
 import subprocess
@@ -67,35 +67,6 @@ def replace_file_pattern(filepath: str, path: Path, sub_path: Path, name: str, a
     else:
         return updated_string
 
-def handle_output(result, name):
-    rc = result.returncode
-
-    # 1) Die ganze stderr als Error, wenn returncode != 0
-    if rc != 0:
-        # log the return code
-        logger.error("Command %s exited with return code %d", name, rc)
-        # log all stdout as debug, falls du Details brauchst
-        if result.stdout:
-            logger.debug("=== %s stdout ===\n%s", name, result.stdout.rstrip())
-        # log stderr as error (rot)
-        logger.error("=== %s stderr ===\n%s", name, result.stderr.rstrip())
-        return
-
-    # 2) Wenn returncode == 0, aber stderr nicht leer → nur Warnings
-    if result.stderr:
-        # split lines and detect keyword "warning"
-        for line in result.stderr.splitlines():
-            # If the line itself mentions 'warning', treat as warning
-            if 'warning' in line.lower():
-                logger.warning("=== %s warning === %s", name, line)
-            else:
-                # sonst immer noch als Info oder Error loggen?
-                logger.error("=== %s stderr (non-warning) === %s", name, line)
-
-    # 3) Alles, was auf stdout kam, bleibt Info (grün)
-    if result.stdout:
-        logger.info("=== %s stdout ===\n%s", name, result.stdout.rstrip())    
-
 
 def execute_script(script_config: dict, asset_file: Path, output_dir: Path):    
     # prepare script path
@@ -160,10 +131,10 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
     # run
     try:
         #logger.info(script_call)
-        logger.info(f">>>>>>>>>>>>>>>>>>>  start command {script_config['name']}")
+        logger.info(f">>>    start command {script_config['name']}")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
         handle_output(result, script_config['name'] )            
-        logger.info(f"<<<<<<<<<<<<<<<<<<< end command {script_config['name']}")
+        logger.info(f"   <<< end command {script_config['name']}")
     except subprocess.CalledProcessError as e:
         logger.error(f"!!!!!!!!!!!! Command {script_config['name']} failed with return code {e.returncode}")        
         handle_output(e, script_config['name'] )

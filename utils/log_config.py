@@ -30,3 +30,33 @@ def setup_logging(level=logging.DEBUG):
 
     root.setLevel(level)
     root.addHandler(handler)
+
+def handle_output(result, name):
+    rc = result.returncode
+    root = logging.getLogger()
+
+    # 1) The whole stderr as error, if returncode != 0
+    if rc != 0:
+        # log the return code
+        root.error("Command %s exited with return code %d", name, rc)
+        # log all stdout as debug, falls du Details brauchst
+        if result.stdout:
+            root.debug("=== %s stdout ===\n%s", name, result.stdout.rstrip())
+        # log stderr as error (rot)
+        root.error("=== %s stderr ===\n%s", name, result.stderr.rstrip())
+        return
+
+    # 2) If returncode == 0, but stderr is not empty → only warnings
+    if result.stderr:
+        # split lines and detect keyword "warning"
+        for line in result.stderr.splitlines():
+            # If the line itself mentions 'warning', treat as warning
+            if 'warning' in line.lower():
+                root.warning("=== %s warning === %s", name, line)
+            else:
+                # otherwise still log as info or error?
+                root.error("=== %s stderr (non-warning) === %s", name, line)
+
+    # 3) Everything that came on stdout remains info (green)
+    if result.stdout:
+        root.info("=== %s stdout ===\n%s", name, result.stdout.rstrip())    

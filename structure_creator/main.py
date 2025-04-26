@@ -355,8 +355,8 @@ def update_readme(file_path_in: Path, file_path_out: Path, name_value: str, desc
     content = file_path_in.read_text(encoding="utf-8")
     
     # Replace the placeholders with the given values
-    content = content.replace("< general:description:name >", name_value)
-    content = content.replace("< general:description:description >", description_value)
+    content = content.replace("[NAME]", name_value)
+    content = content.replace("[DESCRIPTION]", description_value)
     
     # Write the updated content back to the file using UTF-8 encoding
     file_path_out.write_text(content, encoding="utf-8")
@@ -394,10 +394,10 @@ def get_name_description_from_domainMetadata(filename, type):
     with open(filename, "r", encoding="utf-8") as file:
         data = json.load(file)
 
-    name = safe_get(data, [f"{type}:general", "general:description", "general:name", "@value"])
+    name = safe_get(data, [f"{type}:hasDataResource", "gx:name"])
     if not name:
         logger.error(f'name : {name}:general not exists in {filename}')
-    description = safe_get(data, [f"{type}:general", "general:description", "general:description", "@value"])
+    description = safe_get(data, [f"{type}:hasDataResource", "gx:description"])
     if not description:
         logger.error(f'description: {name}:general not exists in {filename}')
 
@@ -524,11 +524,7 @@ def main():
         path.mkdir()
 
     # create readme
-    #url = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/manifest/README.md"
-    url = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/hd-map-asset-example/main/asset/README.md"
-    script_path = Path(__file__).resolve()
-    readme_template = script_path.parent / 'README_template.md'
-    download_readme(url, readme_template)
+    readme_template = Path(__file__).parent.resolve() / 'README_template.md'
     if asset_extension in asset_type:
         # get name + description from {asset_type}_instance.json
         classname = asset_type[asset_extension]['classname']
@@ -536,6 +532,7 @@ def main():
         name, description = get_name_description_from_domainMetadata(domainMetadata, classname.lower())
         if name and description:
             readme_file = filename_out.parent.parent / 'README.md'
+            readme_file.write_bytes(readme_template.read_bytes())
             update_readme(readme_template, readme_file, name, description)
 
     # write metadata json 

@@ -21,7 +21,6 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
                                          allow_warnings=True  # Gibt Warnungen statt Fehler, falls nötig
                                          #debug=False
                                          )
-    logger.info(f'Conforms: {conforms}')
     if not conforms:
         logger.error('####### Validation errors: #######')
         #logger.error(v_text)        

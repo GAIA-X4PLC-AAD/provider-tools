@@ -15,7 +15,7 @@ from rdflib import Graph, URIRef, BNode
 from rdflib.collection import Collection
 from collections import defaultdict
 from pathlib import Path
-from typing import Tuple, Union, Dict, List
+from typing import Any, Tuple, Union, Dict, List
 from utils.utils import download_shacle, get_url_for_download, get_prefixes
 
 import shutil
@@ -106,39 +106,51 @@ def get_value(name, values):
     return None
 
 
-# get node value directrly from node or under qualifiedValueShape
-def get_node_data(values) -> Tuple[str, list]:
-    node_paths = []
-    path_data = get_value("path", values)
-
-    if path_data == 'manifest:hasLicense':
-        test = 0
-
-    for key, data in values.items():        
-        if 'qualifiedValueShape' in key:
-            node_data = get_value("node", data)
-            if isinstance(node_data, str):
-                property = get_value("property", data)
-                if property is not None:
-                    prop_path, prop_data = get_node_data(property)
-                    prop_dict = {}
-                    prop_dict[node_data] = prop_data
-                    node_paths.append(prop_dict)
-                else:
-                    node_paths.append(node_data)
-
-                return path_data, node_paths
-            
-            and_data = get_value("and", node_data)
-            return path_data, and_data
+SHACL_NS = "http://www.w3.org/ns/shacl#"
+# Recursively collect all values under the keys 'node' and 'class' and all nested lists/dicts under 'and', 'or' and 'qualifiedValueShape'
+def collect_nodes(shape: Any) -> List[str]:
     
-    node_data = get_value("node", values)
-    if node_data is None:
-        node_data = get_value("class", values)
-    if node_data is not None:
-        node_paths.append(node_data)
-        return path_data, node_paths
-    return path_data, None
+    nodes = []
+    if isinstance(shape, dict):
+        for k, v in shape.items():
+            # SHACL-node / SHACL-class
+            if k.endswith(f"{SHACL_NS}node") or k.endswith(f"{SHACL_NS}class"):
+                if isinstance(v, str):
+                    nodes.append(v)
+                else:
+                    nodes.extend(collect_nodes(v))
+
+            # qualifiedValueShape enthält verschachtelte Shapes
+            elif k.endswith(f"{SHACL_NS}qualifiedValueShape"):
+                nodes.extend(collect_nodes(v))
+
+            # sh:and / sh:or
+            elif k.endswith(f"{SHACL_NS}and") or k.endswith(f"{SHACL_NS}or"):
+                if isinstance(v, list):
+                    for item in v:
+                        nodes.extend(collect_nodes(item))
+
+            # property-Array: dort können wiederum qualifiedValueShape o.ä. stehen
+            elif k.endswith(f"{SHACL_NS}property"):
+                if isinstance(v, list):
+                    for prop in v:
+                        nodes.extend(collect_nodes(prop))
+
+    elif isinstance(shape, list):
+        for item in shape:
+            nodes.extend(collect_nodes(item))
+    # alles andere ignorieren
+    return nodes
+
+
+#  Extracts the path and lists all target-node / class shapes, no matter how deeply they are nested.
+def get_node_data(values: Dict[str, Any]) -> Tuple[str, List[str]]:
+    path = get_value("path", values)
+    node_list = collect_nodes(values)
+    if node_list:
+        return path, node_list
+    else:
+        return path, None
 
 
 # detect value type (@value or @id) from shacl_values (Literal or IRI node)
@@ -178,34 +190,37 @@ def get_value_type(key : str, shacl_values : dict) -> str:
 #      "@type": "manifest:AccessRole",
 #      "@id": "envited-x:isPublic"
 # }
-def create_property(namespace : str, property_name : str, value, type: str, name: str, lsonLD_dict: dict, shacl_values : dict, level : int):
+def create_property(namespace : str, property_name : str, value, datatype: str, name: str, jsonLD_dict: dict, shacl_values : dict, level : int):
     key = create_namespace_name(namespace, property_name)
     # debug
-    if key == 'gx:name':
+    if key == 'sh:conformsTo':
         test = 0
 
     value_key = get_value_type(key, shacl_values)
 
-    property = None
     if isinstance(value, list):
-        property = []
-        for list_value in value:
-            property_list = {}
-            property_list[value_key] = list_value
-            property.append(property_list)
+        if value_key == '@id':
+            properties = []
+            for list_value in value:
+                properties.append({ value_key : list_value})
+            jsonLD_dict[key] = properties
+        else: 
+            jsonLD_dict[key] = value
     else:
-        property = {}
-        if type:
-            property['@type'] = f'xsd:{type}'
-            property[value_key] = value # value
+        if datatype:
+            if datatype == 'string':
+                jsonLD_dict[key] = value
+            else: # literal
+                jsonLD_dict[key] = {
+                    '@type' : f'xsd:{datatype}', 
+                    value_key : value} # value
+        elif name: # id-Property
+            jsonLD_dict[key] = {
+                '@type' : name, 
+                value_key : value} # id       
         else:
-            if name is not None:
-                property['@type'] = name
-                property[value_key] = value # id
-            else:
-                property[value_key] = value # value
+            jsonLD_dict[key] = {value_key : value}
        
-    lsonLD_dict[key] = property
     logger.debug(f'{" " * level * 3}add prop {key}')
 
 
@@ -256,13 +271,12 @@ def create_namespace_name(namespace : str, shapename : str) -> str:
 #       "@type": "hdmap:Quantity",
 def create_node(namespace : str, shapename : str, type: str, lsonLD: Union[Dict,List], is_list : bool, level : int) -> dict:
     node = {}
-    type_without_shape = type.replace('Shape', '')
-    node['@type'] = create_namespace_name(namespace, type_without_shape)
+    node['@type'] = type
 
     key = create_namespace_name(namespace, shapename)
 
     # debug
-    if key == 'manifest:hasArtifacts':
+    if key == 'hdmap:hasManifest':
         test = 0
 
     if is_list:
@@ -317,7 +331,10 @@ def register_key(key : str, values : dict, meta_data: dict, nodes : list, namesp
                     continue
                 
                 if created_node is None:
-                    created_node = create_node(namespace_sub, shapename, type, lsonLD_dict, False, level)
+                    used_namespace, name_subtype = get_namespace_name_from_url(path)
+                    type_without_shape = type.replace('Shape', '')
+                    type_str = create_namespace_name(namespace_sub, 'Link' if shapename == 'hasManifest' else type_without_shape) # HACK to support "@type": "manifest:Link",
+                    created_node = create_node(used_namespace, shapename, type_str, lsonLD_dict, False, level)
                 # only subnodes / properties of further nodes are registered
 
                 # go deeper
@@ -349,7 +366,9 @@ def register_list(key : str, values : dict, meta_data: dict, nodes : list, names
                         continue
                     
                     if created_node is None:
-                        created_node = create_node(namespace_sub, shapename, type, created_nodes, True, level)
+                        type_without_shape = type.replace('Shape', '')
+                        type_str = create_namespace_name(namespace_sub, type_without_shape)
+                        created_node = create_node(namespace_sub, shapename, type_str, created_nodes, True, level)
                     # only subnodes / properties of further nodes are registered
 
                     # go deeper
@@ -373,7 +392,10 @@ def process_node(shape_value: list, meta_data: Union[Dict, List], nodes_in: list
     
     handle_node =[]
     for values in shape_value:
-        path, nodes = get_node_data(values)
+        path_data = get_value("path", values)     
+        if path_data == 'https://ontologies.envited-x.net/hdmap/v4/ontology#hasManifest':
+            test = 0
+        path, nodes = get_node_data(values)           
         namespace, shapename = get_namespace_name_from_url(path)
         key = create_namespace_name(namespace, shapename)
 
@@ -487,8 +509,8 @@ def resolve_value(graph, value):
         # Check whether it is an RDF list
         if (value, RDF.first, None) in graph:
             try:
-                collection = list(Collection(graph, value))
-                return collection
+                items = list(Collection(graph, value))
+                return [resolve_value(graph, it) for it in items]
             except Exception as e:
                 # Fallback: recursive conversion of the BNode into a dict
                 return convert_bnode_to_dict(graph, value)
@@ -544,7 +566,7 @@ def register_shacle(url_path : str, shacle_name: str, shacls):
             graph_data['dict'] = convert_graph_to_dict(graph, is_gaiax_ontology)        
             graph_data['prefixes'] = getPrefixes(graph)
 
-            # debug write as json
+            # DEBUG write as json
             debug_json_file = local_file_path.with_suffix(".json")
             with open(debug_json_file, 'w') as f:
                 json.dump(graph_data['dict'], f, indent=2, default=datetime_handler)

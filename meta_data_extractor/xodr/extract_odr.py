@@ -233,6 +233,19 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     meta_data_dict[f'{get_schema_name().lower()}:hasDataResourceExtension'] = hasDataResourceExtension_dict
 
     hasManifest_dict = dict() # TODO
+    hasManifest_dict['manifest:hasAccessRole'] = 'envited-x:isPublic'
+    hasManifest_dict['manifest:hasCategory'] = 'envited-x:isManifest'
+    hasManifest_dict['manifest:hasFileMetadata'] = { # TODO
+        "manifest:filename": "manifest_reference.json",
+        "manifest:filePath": "./manifest_reference.json",
+        "manifest:mimeType": "application/ld+json"
+    }
+    hasManifest_dict['manifest:iri'] = 'did:web:registry.gaia-x.eu:Manifest:TODO'
+    hasManifest_dict['skos:note'] = 'Ensure that manifest_reference.json contains all required categories: simulationData, documentation, metadata, media.'
+    hasManifest_dict['sh:conformsTo'] = [
+        "https://ontologies.envited-x.net/envited-x/v2/ontology#",
+        "https://ontologies.envited-x.net/manifest/v5/ontology#"
+    ]
     meta_data_dict[f'{get_schema_name().lower()}:hasManifest'] = hasManifest_dict
 
     return meta_data_dict

@@ -6,7 +6,7 @@ import json
 import requests
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 g_envited_url = 'https://ontologies.envited-x.net'
 g_gaiax_server = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base"
@@ -22,7 +22,7 @@ def download_shacle(url_path : str, shacle_name: str) -> Path:
         url = f'{url_path}{filename}' if str(url_path).startswith(g_envited_url) else url_path
         response = requests.get(url)
         if not response:
-            logging.error(f'No shacl files found in url: {url}')
+            logger.error(f'No shacl files found in url: {url}')
             exit(1)
 
         if not Path(g_shacle_folder).exists():
@@ -74,11 +74,11 @@ def load_shacl_files(shacl_files):
 def load_jsonld_file(jsonld_file : Path):
 
     if not jsonld_file.exists():
-        logging.error(f'JsonLD files not found: {jsonld_file}')
+        logger.error(f'JsonLD files not found: {jsonld_file}')
         exit(1)  
 
     data_graph = Graph()
-    logging.info(f'adding jsonld file to data graph: {jsonld_file}.')
+    logger.info(f'adding jsonld file to data graph: {jsonld_file}.')
     with open(jsonld_file) as f:
         data = json.load(f)
     data_graph.parse(data=json.dumps(data), format='json-ld')

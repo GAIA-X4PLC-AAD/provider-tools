@@ -5,7 +5,7 @@ import argparse
 import io_functions as io
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 ################ reduce functions ########################
@@ -85,7 +85,7 @@ def main():
     # Path to the XML file
     xml_file_path = Path(args.filename)
     if not xml_file_path.exists():
-        logging.error(f'json file {xml_file_path} not exists')
+        logger.error(f'json file {xml_file_path} not exists')
         exit(1)
 
     # Target JSON file
@@ -135,7 +135,7 @@ def main():
         #find node
         header = root_read.find('./header')
         if header is not None:
-            logging.info('header found')
+            logger.info('header found')
         
         
 if __name__ == '__main__':

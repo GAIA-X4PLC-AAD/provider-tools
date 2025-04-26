@@ -18,7 +18,7 @@ g_envitedX = 'envited-x'
 g_envited_url = 'https://ontologies.envited-x.net/'
 g_version = 'v2'
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 categories = {
     "isSimulationData" : [
@@ -370,7 +370,7 @@ def download_readme(readme_url : str, filename_target : str) -> str:
         with open(filename_target, "w", encoding="utf-8") as file:
             file.write(content)
     else:
-        logging.error(f'No readme files found in url: {readme_url}')
+        logger.error(f'No readme files found in url: {readme_url}')
         exit(1)
 
 def safe_get(d, keys, default=None):
@@ -396,10 +396,10 @@ def get_name_description_from_domainMetadata(filename, type):
 
     name = safe_get(data, [f"{type}:general", "general:description", "general:name", "@value"])
     if not name:
-        logging.error(f'name : {name}:general not exists in {filename}')
+        logger.error(f'name : {name}:general not exists in {filename}')
     description = safe_get(data, [f"{type}:general", "general:description", "general:description", "@value"])
     if not description:
-        logging.error(f'description: {name}:general not exists in {filename}')
+        logger.error(f'description: {name}:general not exists in {filename}')
 
     return name, description
 
@@ -431,13 +431,13 @@ def main():
     if not user_input_file.is_absolute():
         user_input_file = user_input_file.resolve()
     if not user_input_file.exists():
-        logging.error(f'json file {user_input_file} not exists')
+        logger.error(f'json file {user_input_file} not exists')
         exit(1)
 
     if not data_path.is_absolute():
         data_path = data_path.resolve()
     if not data_path.exists():
-        logging.error(f'data path {data_path} not exists')
+        logger.error(f'data path {data_path} not exists')
         exit(1)
 
     # read json
@@ -447,7 +447,7 @@ def main():
     # initialize asset_name
     asset_name, asset_extension = get_asset(user_data)
     if not asset_name or not asset_extension:
-        logging.error(f'no asset found in {file}')
+        logger.error(f'no asset found in {file}')
         exit(1)
     if asset_extension in asset_type:        
         asset_data = asset_type[asset_extension]
@@ -465,7 +465,7 @@ def main():
         typ = file['type']
         cat_type_data = get_data_from_category_type(category, typ)
         if not cat_type_data:
-            logging.error(f'type {typ} not found in category {category}')
+            logger.error(f'type {typ} not found in category {category}')
             exit(1)
 
         if not is_url(filename):      

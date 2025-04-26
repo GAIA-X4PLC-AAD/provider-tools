@@ -24,13 +24,7 @@ import logging
 import argparse
 import operator
 
-
-DEBUG = False
-if DEBUG:
-    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s - %(message)s')
-else:
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
-
+logger = logging.getLogger(__name__)
 
 # global values
 g_sh_url = 'http://www.w3.org/ns/shacl#'
@@ -211,7 +205,7 @@ def create_property(namespace : str, property_name : str, value, type: str, name
                 property[value_key] = value # value
        
     lsonLD_dict[key] = property
-    logging.debug(f'{" " * level * 3}add prop {key}')
+    logger.debug(f'{" " * level * 3}add prop {key}')
 
 
 # from 'https://ontologies.envited-x.net/manifest/v4/ontology#hasManifestReference'
@@ -232,7 +226,7 @@ def get_namespace_name_from_url(url: str) -> Tuple[str, str]:
 def get_namespace(namespace_and_name):
     parts = namespace_and_name.split('::')
     if len(parts) != 2:
-        logging.error(f'{namespace_and_name} not valid!')
+        logger.error(f'{namespace_and_name} not valid!')
         exit(1)
     return parts[0], parts[1]
 
@@ -266,7 +260,7 @@ def create_node(namespace : str, shapename : str, type: str, lsonLD: Union[Dict,
     else:
         lsonLD[key] = node
 
-    logging.debug(f'{" " * level * 3}add node {key}')
+    logger.debug(f'{" " * level * 3}add node {key}')
     return node
 
 
@@ -328,7 +322,7 @@ def register_key(key : str, values : dict, meta_data: dict, nodes : list, namesp
 def register_list(key : str, values : dict, meta_data: dict, nodes : list, namespace: str, shapename: str, path: str, is_required: bool, lsonLD_dict: dict, level : int):
     if key in meta_data:
         if not isinstance(meta_data[key], list):
-            logging.error(f'meta_data of {key} should be list!')
+            logger.error(f'meta_data of {key} should be list!')
             exit(1)
 
         created_nodes = []
@@ -361,7 +355,7 @@ def register_list(key : str, values : dict, meta_data: dict, nodes : list, names
 # process node with all props and sub nodes
 def process_node(shape_value: list, meta_data: Union[Dict, List], nodes_in: list, lsonLD_dict: dict, level : int):
     if not isinstance(shape_value, list):
-        logging.error(f'shape_value should be a list!')
+        logger.error(f'shape_value should be a list!')
         exit(1)
     
     handle_node =[]
@@ -442,7 +436,7 @@ def process_graph(schema_namespace, schema_name, meta_data):
         if 'did' in meta_data:
             config.JSON_OUT['@id'] = meta_data['did']
         else:
-            logging.error(f'did not found in extraced data!')
+            logger.error(f'did not found in extraced data!')
             exit(1)
         name = get_name_from_url(schema_name)
         name = name.replace('Shape', '')
@@ -452,7 +446,7 @@ def process_graph(schema_namespace, schema_name, meta_data):
         # get first element of main shacle        
         shape_value = get_shacle_shape(schema_namespace, schema_name)
         if not shape_value:
-            logging.error(f'did not found {schema_name} in shacl {schema_namespace}!')
+            logger.error(f'did not found {schema_name} in shacl {schema_namespace}!')
             exit(1)
         process_node(shape_value, meta_data, None, config.JSON_OUT, 0)
 
@@ -460,7 +454,7 @@ def process_graph(schema_namespace, schema_name, meta_data):
         if g_envited_x_str in config.JSON_OUT['@context']:
             del config.JSON_OUT['@context'][g_envited_x_str]        
     else:
-        logging.error(f'Cannot find ontology {schema_namespace}')
+        logger.error(f'Cannot find ontology {schema_namespace}')
     
     return
 
@@ -537,7 +531,7 @@ def register_shacle(url_path : str, shacle_name: str, shacls):
 
             shacls[shacle_name] = graph_data
     except:
-        logging.exception(f'cannot read turtle file: {local_file_path}')
+        logger.exception(f'cannot read turtle file: {local_file_path}')
         exit(1)
 
 
@@ -553,7 +547,7 @@ def main():
     claim_path = Path(args.filename)
     claim_path = claim_path.resolve()
     if not claim_path.exists():
-        logging.exception(f'Could not find file {claim_path}')
+        logger.exception(f'Could not find file {claim_path}')
         exit(1)
     with open(claim_path, 'r', encoding='utf-8') as file:
         claim_data = json.load(file)
@@ -587,14 +581,14 @@ def main():
     try:
         process_graph(shacle_namespace, shacle_name, claim_data)
     except:
-        logging.exception(f'Could not convert to json')
+        logger.exception(f'Could not convert to json')
         exit(1)
         
     # write claims as json id to output    
     output_path = Path(args.out)
     with open(output_path, 'w') as f:
         json.dump(config.JSON_OUT, f, indent=2, default=datetime_handler)
-        logging.info(f'write json ld to {output_path}')
+        logger.info(f'write json ld to {output_path}')
 
 
 if __name__ == '__main__':

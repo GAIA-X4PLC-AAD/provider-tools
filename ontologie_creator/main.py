@@ -9,8 +9,7 @@ import argparse
 import logging
 import os
 
-# init logging
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # data string to data type
 dataTypeMap = {
@@ -63,7 +62,7 @@ def check_special_chars(s):
     special_chars = [" ", "/", "..."]
     for char in special_chars:
         if char in s:
-            logging.error(f'attribute name {s} has unsuported chars!')
+            logger.error(f'attribute name {s} has unsuported chars!')
             return True
     return False
 
@@ -83,7 +82,7 @@ def is_utf16_le(string):
         string.encode('utf-16le')
         return True
     except UnicodeEncodeError:
-        logging.exception(f'string {string} has utf16 chars!')
+        logger.exception(f'string {string} has utf16 chars!')
         return False
 
 
@@ -141,7 +140,7 @@ def read_from_excel(table):
     for cat, cat_data in attributes.items():
         is_utf16_le(cat)  
         if check_special_chars(cat):
-            logging.exception(f'category {cat} has unsuported chars!')
+            logger.exception(f'category {cat} has unsuported chars!')
 
         for sub_cat, sub_cat_data in cat_data.items():
             if sub_cat == "categorie_data":
@@ -149,12 +148,12 @@ def read_from_excel(table):
 
             is_utf16_le(sub_cat)  
             if check_special_chars(sub_cat):
-                logging.exception(f'sub category {sub_cat} has unsuported chars!')
+                logger.exception(f'sub category {sub_cat} has unsuported chars!')
 
             for attrib, attrib_data in sub_cat_data.items():
                 is_utf16_le(attrib)
                 if check_special_chars(attrib):
-                    logging.exception(f'attrib {attrib} has unsuported chars!')                
+                    logger.exception(f'attrib {attrib} has unsuported chars!')                
         
                 # convert datatype str in xsd type
                 """
@@ -163,7 +162,7 @@ def read_from_excel(table):
                 elif attrib_data['data_type'] == "nan":
                     attrib_data['data_type'] = dataTypeMap['string']
                 else:
-                    logging.error(f'unsupported datatype: {attrib_data['data_type']} for {attrib}')
+                    logger.error(f'unsupported datatype: {attrib_data['data_type']} for {attrib}')
                 """
 
                 # convert frequency str to min max
@@ -180,8 +179,8 @@ def read_from_excel(table):
                 elif attrib_data['frequency'] == "nan":      
                     attrib_data['frequency_min'] = 0
                 else:
-                    logging.info(type(attrib_data['frequency']))
-                    logging.error(f'unsupported frequency: {attrib_data['frequency']} for {attrib}')
+                    logger.info(type(attrib_data['frequency']))
+                    logger.error(f'unsupported frequency: {attrib_data['frequency']} for {attrib}')
 
                 # fix unit
                 if attrib_data['unit'] == 'nan' or attrib_data['unit'] == '-':
@@ -223,7 +222,7 @@ def create_onotology(cat, cat_data, output_path, link_repro):
     with open(file, 'w') as f:
         f.write(ontology.serialize(format='turtle'))
         f.close()
-        logging.info(f'write {ontology_name}')
+        logger.info(f'write {ontology_name}')
 
 
 def handle_data_type(root, propierty, cat_namespace, attrib_data):
@@ -248,7 +247,7 @@ def handle_data_type(root, propierty, cat_namespace, attrib_data):
             values = "(" + " ".join("'" + value + "'" for value in type_data['values']) + ")"
             in_constraint.add(SHACL.in_, Literal(values))
     else:
-        logging.error(f'unsupported datatype: {data_type} for {attrib_data['name']}')    
+        logger.error(f'unsupported datatype: {data_type} for {attrib_data['name']}')    
 
 
 def create_property(root, shape, cat_namespace, attrib_data, order):    
@@ -346,7 +345,7 @@ def create_data_structure(root, cat_namespace):
         elif used_type == "link":
             create_LinkShape(root, cat_namespace)
         else:
-            logging.error(f'data node not implmented: {used_type}')  
+            logger.error(f'data node not implmented: {used_type}')  
 
 
 def create_shacl(cat, cat_data, output_path, link_repro):
@@ -410,7 +409,7 @@ def create_shacl(cat, cat_data, output_path, link_repro):
     with open(file, 'w') as f:
         f.write(shacl.serialize(format='turtle'))
         f.close()
-        logging.info(f'write {shacl_name}')
+        logger.info(f'write {shacl_name}')
         
 def fix_shacle(cat, output_path):
     shacl_name = f'{cat}_shacl'
@@ -440,7 +439,7 @@ def main():
 
     table_file = args.table
     if not os.path.isfile(table_file):
-        logging.error(f'table file {table_file} not exists')
+        logger.error(f'table file {table_file} not exists')
         exit(1)
     attributes = read_from_excel(table_file)
 

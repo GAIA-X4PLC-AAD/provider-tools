@@ -8,11 +8,11 @@ import logging
 import os
 import sys
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def update_config_file(template_file: Path, input_file: Path, result_file: Path, config_file: Path) -> Path:
     # Parse the XML file
-    logging.info(f"Using template {template_file}")
+    logger.info(f"Using template {template_file}")
     tree = etree.parse(template_file)
     root = tree.getroot()
 
@@ -26,7 +26,7 @@ def update_config_file(template_file: Path, input_file: Path, result_file: Path,
 
     # Write the updated XML to the output file
     tree.write(config_file, encoding="utf-8", pretty_print=True, xml_declaration=True)
-    logging.info(f"Created configuration file {config_file}")
+    logger.info(f"Created configuration file {config_file}")
 
     return config_file
 
@@ -38,7 +38,7 @@ def create_config_file(config_file_name: Path, input_file: Path, result_file : P
     template_file = templates_folder / config_file_name
 
     if not template_file.exists():
-        logging.error(f'template file not exist {template_file}')
+        logger.error(f'template file not exist {template_file}')
         exit(1)
 
     return update_config_file(template_file, input_file, result_file, Path("qc_config.xml"))
@@ -54,7 +54,7 @@ def main():
 
     input_file = Path(args.filename)
     if not input_file.exists():
-        logging.error(f'input file {input_file} not exists')
+        logger.error(f'input file {input_file} not exists')
         exit(1)
 
     # create config file from templates with input_file replacement
@@ -64,14 +64,14 @@ def main():
 
     config_file_name = Path(args.config)
     if not config_file_name:
-        logging.error(f'missing config file {config_file_name}')
+        logger.error(f'missing config file {config_file_name}')
         exit(1)    
 
     config_file = create_config_file(config_file_name, input_file, output_file)
 
     app_name = args.checkerbundle
     if not app_name:
-        logging.error(f'app name not valid {app_name}')
+        logger.error(f'app name not valid {app_name}')
         exit(1)
     
     # call
@@ -81,15 +81,15 @@ def main():
     script_call.append(config_file.as_posix())
 
     try:
-        logging.info(f"start command {app_name}")
+        logger.info(f"start command {app_name}")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        logging.info(f"end command {app_name} succeeded with output:")
-        logging.info(result.stdout)  # print default output from sub process
-        logging.info(result.stderr)  # print logging output from sub process
+        logger.info(f"end command {app_name} succeeded with output:")
+        logger.info(result.stdout)  # print default output from sub process
+        logger.info(result.stderr)  # print logging output from sub process
     except subprocess.CalledProcessError as e:
-        logging.error(f"Command {app_name} failed with return code {e.returncode}")
-        logging.error(f"Error output: {e.stderr}")
-        logging.error(f"Error output: {e.stdout}")
+        logger.error(f"Command {app_name} failed with return code {e.returncode}")
+        logger.error(f"Error output: {e.stderr}")
+        logger.error(f"Error output: {e.stdout}")
         exit(1)
 
     # write als txt
@@ -106,14 +106,14 @@ def main():
     script_call.append (f'{text_report_executable_path}') # call Textreport
     script_call.append(f'{output_file}')
 
-    logging.info(f'{script_call}')
+    logger.info(f'{script_call}')
     try:
-        logging.info(f"Start Converting xqar to human readable form :")
+        logger.info(f"Start Converting xqar to human readable form :")
         if sys.platform.startswith("linux") :
             os.chmod(text_report_executable_path, stat.S_IXUSR) #chmode +x TextReport (in docker i.e. the Docker )
             # Confirm permissions (optional)
             permissions = oct(os.stat(text_report_executable_path).st_mode)[-3:]
-            logging.info(f"Permissions: {permissions}")
+            logger.info(f"Permissions: {permissions}")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
         
         xqar_path_without_extension = output_file.with_suffix('')  # Get full path without extension
@@ -121,13 +121,13 @@ def main():
         result_text_path = output_file.parent / 'Report.txt'
         result_text_path.rename(new_path)
 
-        logging.info(f"Succeeded with output:")
-        logging.info(result.stdout)  # print default output from sub process
-        logging.info(result.stderr)  # print logging output from sub process
+        logger.info(f"Succeeded with output:")
+        logger.info(result.stdout)  # print default output from sub process
+        logger.info(result.stderr)  # print logging output from sub process
     except subprocess.CalledProcessError as e:
-        logging.error(f"Failed with return code {e.returncode}")
-        logging.error(f"Error output: {e.stderr}")
-        logging.error(f"Error output: {e.stdout}")
+        logger.error(f"Failed with return code {e.returncode}")
+        logger.error(f"Error output: {e.stderr}")
+        logger.error(f"Error output: {e.stdout}")
         exit(1)
 
 

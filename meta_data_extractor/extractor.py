@@ -8,6 +8,8 @@ import json
 import secrets
 import string
 
+logger = logging.getLogger(__name__)
+
 # manual assignment of local country name (Germany) to alpha-2 -> OSM only receives local name, but for alpha 2 code you need the English name.
 country_name_to_alpha2 = {
     "Deutschland": "DE",
@@ -106,12 +108,12 @@ def datetime_handler(x):
 def extract(file: Path, output_file: Path) -> bool:   
     file = file.expanduser()
     file = file.resolve()
-    
+
     # check folder with extension
     extension = file.suffix.lstrip('.')
     format_path = Path(__file__).parent / f'{extension}'
     if not format_path.exists() or not format_path.is_dir():
-        logging.error(f'Provided format path does not exist or is not a file: {format_path.absolute()}')
+        logger.error(f'Provided format path does not exist or is not a file: {format_path.absolute()}')
         return False
     
     # import python script from subfolder
@@ -120,18 +122,18 @@ def extract(file: Path, output_file: Path) -> bool:
         return False
     module_name = Path(files[0]).relative_to(Path(__file__).parent).as_posix().replace('/', '.').replace('.py', '')
     required_functions = ['extract_meta_data', 'get_description', 'get_schema_name', 'get_namespace']
-    logging.debug(f'Loading extractor {{{module_name}}}')
+    logger.debug(f'Loading extractor {{{module_name}}}')
     try:
         extract_module = __import__(module_name, fromlist=required_functions)
     except:
-        logging.exception(f'Could not load extract file {module_name}')
+        logger.exception(f'Could not load extract file {module_name}')
         return False
     
     # check required functions    
     missing_function = False
     for function in required_functions:
         if not hasattr(extract_module, function):    
-            logging.error(f'{module_name} has no requried function {function}')
+            logger.error(f'{module_name} has no requried function {function}')
             missing_function = True
             break
     if missing_function: 
@@ -143,11 +145,11 @@ def extract(file: Path, output_file: Path) -> bool:
         if valid is False:
             return valid        
     except:
-        logging.exception(f'Could not extract format {extract_module.get_description()}')
+        logger.exception(f'Could not extract format {extract_module.get_description()}')
         return False     
 
     with open(output_file, 'w') as f:
         json.dump(meta_data, f, indent=4, ensure_ascii=False, default=datetime_handler)
-        logging.info(f'write json to {output_file}')
+        logger.info(f'write json to {output_file}')
    
     return True

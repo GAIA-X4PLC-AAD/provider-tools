@@ -4,7 +4,7 @@ from utils.utils import download_shacle, get_prefixes, get_url_for_download, loa
 import argparse
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 gaiax_url_part = 'GAIA-X4PLC-AAD/ontology-management-base'
    
@@ -37,7 +37,7 @@ def main():
     with open(file, 'w') as f:
         f.write(shacl_graph.serialize(format='turtle'))
         f.close()
-        logging.info(f'write {file}')
+        logger.info(f'write {file}')
 
 if __name__ == '__main__':
     main()

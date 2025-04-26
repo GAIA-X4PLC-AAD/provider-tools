@@ -7,7 +7,7 @@ from utils.utils import download_shacle, get_url_for_download, get_prefixes, loa
 import argparse
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 gaiax_url_part = 'GAIA-X4PLC-AAD/ontology-management-base'
 
@@ -21,10 +21,10 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
                                          allow_warnings=True  # Gibt Warnungen statt Fehler, falls nötig
                                          #debug=False
                                          )
-    logging.info(f'Conforms: {conforms}')
+    logger.info(f'Conforms: {conforms}')
     if not conforms:
-        logging.error('####### Validation errors: #######')
-        #logging.error(v_text)        
+        logger.error('####### Validation errors: #######')
+        #logger.error(v_text)        
         # Iterate over all ValidationResult nodes
         for result in v_graph.subjects(RDF.type, SH.ValidationResult):
             # Extract severity (e.g., Violation or Warning)
@@ -37,7 +37,7 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
             message = v_graph.value(result, SH.resultMessage)
 
             # Log a structured, one-line summary of each result
-            logging.error(
+            logger.error(
                 "-> [%s] Path=%s\n   : %s",
                 sev.split('#')[-1] if sev else "UnknownSeverity",
                 path or "(no path)",

@@ -7,7 +7,7 @@ from pathlib import Path
 import argparse
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
 
     valid = extract(file, output_file)
     if valid is not True:
-        logging.error(f'file {file.absolute()} can not be extraced')
+        logger.error(f'file {file.absolute()} can not be extraced')
 
 if __name__ == '__main__':
     main()

@@ -4,8 +4,6 @@ import time
 import logging
 import argparse
 import requests
-import shutil
-import os
 
 DEBUG = True
 
@@ -56,12 +54,12 @@ def main():
 
     jsonLD_file = Path(args.filename)
     if not jsonLD_file.exists():
-        logging.error(f'jsonLD file not exist {jsonLD_file}')
+        logger.error(f'jsonLD file not exist {jsonLD_file}')
         exit(1)
 
     shacl_file = Path(args.shacl)
     if not shacl_file.exists():
-        logging.error(f'shacl file not exist {shacl_file}')
+        logger.error(f'shacl file not exist {shacl_file}')
         exit(1)
 
     if DEBUG:

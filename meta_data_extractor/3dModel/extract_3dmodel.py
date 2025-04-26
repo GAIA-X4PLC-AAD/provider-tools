@@ -5,6 +5,8 @@ import json
 import logging
 import extractor
 
+logger = logging.getLogger(__name__)
+
 version = 'v4'
 
 def get_meta_data(file_data: dict, attributes: dict):
@@ -31,12 +33,12 @@ def get_meta_data(file_data: dict, attributes: dict):
 def extract_meta_data(file: Path) ->Tuple[bool, dict]:
 
     # read json file 
-    logging.debug(f'Loading input file {file.absolute()}')
+    logger.debug(f'Loading input file {file.absolute()}')
     try: 
         with open(file, 'r') as f:
             file_data = json.load(f)
     except:
-        logging.exception(f'Cannot read json file {file.absolute()}')
+        logger.exception(f'Cannot read json file {file.absolute()}')
         return False
         
     # ask in file dialog for file with given file extension -->close program if interrupted
@@ -44,7 +46,7 @@ def extract_meta_data(file: Path) ->Tuple[bool, dict]:
         attributes = dict()
         get_meta_data(file_data, attributes)
     except:
-        logging.exception(f'Cannot extract from file {file.absolute()}')
+        logger.exception(f'Cannot extract from file {file.absolute()}')
         return False
     
     data = {}
@@ -52,7 +54,7 @@ def extract_meta_data(file: Path) ->Tuple[bool, dict]:
     data['shacle_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     data[f'{get_namespace()}:{get_schema_name().lower()}'] = attributes
     
-    logging.info(f'Extract from file {file}')
+    logger.info(f'Extract from file {file}')
     return True, data
     
 def get_description() -> str:

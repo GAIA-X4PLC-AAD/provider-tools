@@ -3,7 +3,7 @@ import argparse
 import math
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class Vec2:
     def __init__(self, x, y):
@@ -83,21 +83,21 @@ def main():
 
     xodr_file = args.filename
     if not xodr_file.exists():        
-        logging.error(f'{xodr_file} not found')
+        logger.error(f'{xodr_file} not found')
         exit(1)
     
     # Parse the XML file and extract coordinates
     in_proj, offset, lines = parse_xml(xodr_file)
     
     if in_proj is None or lines is None:
-        logging.error(f"no projection found!")    
+        logger.error(f"no projection found!")    
         exit(1)
 
     # calculate box from coordinates
     bounding_box = calcBox(lines, offset)
     
     # print box
-    logging.info(f"box : {bounding_box.x_min}, {bounding_box.x_max} - {bounding_box.y_min}, {bounding_box.y_max}")
+    logger.info(f"box : {bounding_box.x_min}, {bounding_box.x_max} - {bounding_box.y_min}, {bounding_box.y_max}")
 
 
 if __name__ == '__main__':

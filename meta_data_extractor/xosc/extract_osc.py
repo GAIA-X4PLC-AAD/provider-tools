@@ -13,10 +13,7 @@ import uuid
 import os
 import extractor
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s.%(msecs)03d [%(levelname)5s-%(name)s] {%(module)s -> %(funcName)s} %(message)s',
-                    datefmt='%d/%m/%Y %H:%M:%S')
-logging.getLogger(__name__).setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 version = 'v4'
 
@@ -358,9 +355,9 @@ def load_openscenario_file(osc_path: Path) -> OpenSCENARIO:
     filepath = get_osc_value(logic_file, 'filepath', osc)
     osc.map_location = (
         osc_path.parent / filepath).resolve()
-    logging.debug(f'Loading map {osc.map_location}')
+    logger.debug(f'Loading map {osc.map_location}')
     if not osc.map_location.exists():
-        logging.error(f'map not exist {osc.map_location}')
+        logger.error(f'map not exist {osc.map_location}')
         exit(1)
     if './/CatalogLocations' in sc:
         for catalog in sc.find('.//CatalogLocations'):
@@ -373,11 +370,11 @@ def load_openscenario_file(osc_path: Path) -> OpenSCENARIO:
             if location.is_dir():
                 for file in location.iterdir():
                     if file.name.endswith('osc') or file.name.endswith('xosc'):
-                        logging.debug(f'Loading catalog {file}')
+                        logger.debug(f'Loading catalog {file}')
                         osc.catalogs[catalog.tag].append(ET.parse(file).getroot())
                         osc.catalog_locations[catalog.tag].append(file)
             elif location.is_file():
-                logging.debug(f'Loading catalog {location}')
+                logger.debug(f'Loading catalog {location}')
                 osc.catalogs[catalog.tag].append(ET.parse(location).getroot())
     return osc
 
@@ -493,7 +490,7 @@ def analyze_environment(osc_environment: ET.Element, tags: typing.Dict, uuid_ope
         try:
             dt = datetime.strptime(time, '%Y-%m-%dT%H:%M:%S')
         except:
-            logging.exception(f'Unknown datetime of environment: {time}')
+            logger.exception(f'Unknown datetime of environment: {time}')
 
 
 def add_list_tag(data: list, tags: typing.Dict, uuid_openlabel: str, tag_type: str):
@@ -548,21 +545,21 @@ def add_environment_tags(scenario: OpenSCENARIO, tags: typing.Dict, uuid_openlab
                         if env is not None:
                             break
                     if env is not None:
-                        logging.debug(
+                        logger.debug(
                             f'Found environment "{entry}" in catalog {catalog}')
                         analyze_environment(
                             env, tags, uuid_openlabel, wind_speeds, rain_values, snow_values, fog_visual_range_values, sun_elevation_values, fractional_cloud_cover_values, time_list)
                     else:
-                        logging.warning(
+                        logger.warning(
                             f'Could not find environment "{entry}" in given environment catalogs...')
                 else:
-                    logging.warning(
+                    logger.warning(
                         f'Cannot find environment catalog: {cat_name} in catalog definitions: {scenario.catalogs.keys()}')
             else:
-                logging.warning(
+                logger.warning(
                     f'Unknown tag for EnvironmentAction children: {environment_action[0].tag}')
         else:
-            logging.warning(
+            logger.warning(
                 f'Wrong number of children ({len(environment_action)}) in EnvironmentAction: {environment_action}')
 
     add_list_tag(wind_speeds, tags, uuid_openlabel, 'weatherWindValue')
@@ -636,7 +633,7 @@ def action_belongs_to_entity(action: ET.Element, parent_map: dict, subj_id: str)
             if entity_ref.attrib['entityRef'] == subj_id:
                 return True
     else:
-        logging.warning(
+        logger.warning(
             f'Unknown parent structure for {action}, 3rd parent is {third_parent.tag}')
     return False
 
@@ -676,7 +673,7 @@ def analyze_road_user(child: ET.Element, road_users: set):
             road_users.add('RoadUserVehicle')
             road_users.add('VehicleVan')
         else:
-            logging.warning(
+            logger.warning(
                 f'Unknown vehicle category {child.attrib["vehicleCategory"]}')
         if 'role' in child.attrib:
             if child.attrib['role'] == 'ambulance' or child.attrib['role'] == 'police' or child.attrib['role'] == 'fire':
@@ -695,7 +692,7 @@ def analyze_road_user(child: ET.Element, road_users: set):
             road_users.add('RoadUserVehicle') #?
             road_users.add('VehicleWheelchair')
         else:
-            logging.warning(
+            logger.warning(
                 f'Unknown pedestrian category {child.attrib["pedestrianCategory"]}')
     elif child.tag == 'MiscObject':
         road_users.add('RoadUser') #?
@@ -720,7 +717,7 @@ def analyze_traffic_agent_types(scenario: OpenSCENARIO, tags: typing.Dict, uuid_
                     analyze_road_user(entry, road_users)
                 else:
                     #pass
-                    logging.warning(
+                    logger.warning(
                         f'Could not find element {entry_name} in catalog {cat_name}')
         else:
             analyze_road_user(child, road_users)
@@ -1107,7 +1104,7 @@ def find_files_with_ending(parent: Path, ending: str, files: typing.List[Path]) 
 
 
 def get_scenario_files(scenario_dir: Path):
-    logging.debug(f'Finding OSC files in {scenario_dir}')
+    logger.debug(f'Finding OSC files in {scenario_dir}')
     osc_files = []
     find_files_with_ending(scenario_dir, '.xosc', osc_files)
     scenario_files = []
@@ -1117,9 +1114,9 @@ def get_scenario_files(scenario_dir: Path):
             if root.find('.//Storyboard') is not None:
                 scenario_files.append(osc_file)
             else:
-                logging.debug(f'Not analyzing {osc_file} since it is not a Scenario (probably a catalog)')
+                logger.debug(f'Not analyzing {osc_file} since it is not a Scenario (probably a catalog)')
         except:
-            logging.exception(f'Could not read {osc_file} - not generating meta data for it.')
+            logger.exception(f'Could not read {osc_file} - not generating meta data for it.')
     return scenario_files
 
 
@@ -1421,28 +1418,28 @@ def get_meta_data(osc: OpenSCENARIO, file_path: Path, default_value: str = "Unkn
 def extract_meta_data(file: Path) -> Tuple[bool, dict]:
 
     # read file
-    logging.debug(f'Loading input file {file.absolute()}')
+    logger.debug(f'Loading input file {file.absolute()}')
     try: 
         with open(file, 'r') as f:
             _ = f.read()
     except:
-        logging.exception(f'Cannot read file {file.absolute()}')
+        logger.exception(f'Cannot read file {file.absolute()}')
         return False
     
     # parse xml
     try: 
         osc = load_openscenario_file(file)
     except:
-        logging.exception(f'Cannot parse XML from file {file.absolute()}')
+        logger.exception(f'Cannot parse XML from file {file.absolute()}')
         return False
     
     try:
         attributes = get_meta_data(osc, file)
     except:
-        logging.exception(f'Cannot extract from file {file.absolute()}')
+        logger.exception(f'Cannot extract from file {file.absolute()}')
         return False
     
-    logging.info(f'Extract from file {file}')
+    logger.info(f'Extract from file {file}')
     return True, attributes
     
 def get_description() -> str:

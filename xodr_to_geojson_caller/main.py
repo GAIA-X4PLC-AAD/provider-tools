@@ -7,7 +7,7 @@ import logging
 
 DEBUG = True
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='Calls the java tool from VCS https://github.com/virtualcitySYSTEMS/opendriveconverter to convert an OpenDRIVE file into a geojson.')   
@@ -20,7 +20,7 @@ def main():
     if not xodr_file.is_absolute():
         xodr_file = xodr_file.resolve()
     if not xodr_file.exists():
-        logging.error(f'json file {xodr_file} not exists')
+        logger.error(f'json file {xodr_file} not exists')
         exit(1)
         
     filename_out = Path(args.out)
@@ -53,13 +53,13 @@ def main():
     # run
     try:    
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        logging.info(f"end command succeeded with output:")
-        logging.info(result.stdout)  # print default output from sub process
-        logging.info(result.stderr)  # print logging output from sub process
+        logger.info(f"end command succeeded with output:")
+        logger.info(result.stdout)  # print default output from sub process
+        logger.info(result.stderr)  # print logging output from sub process
     except subprocess.CalledProcessError as e:
-        logging.error(f"Command failed with return code {e.returncode}")
-        logging.error(f"Error output: {e.stderr}")
-        logging.error(f"Error output: {e.stdout}")
+        logger.error(f"Command failed with return code {e.returncode}")
+        logger.error(f"Error output: {e.stderr}")
+        logger.error(f"Error output: {e.stdout}")
         exit(1)
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 from pathlib import Path
 from zipfile import ZipFile
+from utils.log_config import setup_logging
 
 import json
 import subprocess
@@ -7,7 +8,10 @@ import argparse
 import shutil
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+# configure logging once for the entire application
+DEBUG = False
+setup_logging(logging.INFO)
+logger = logging.getLogger(__name__)
 
 asset_types = {
     "xodr" :"hdmap",
@@ -23,7 +27,7 @@ def get_configs(config_dir: Path, asset_file: Path) ->list:
     # load process.json
     process_file = config_dir / "process.json"
     if not process_file.exists():
-        logging.error(f'config file {process_file} not exists')
+        logger.error(f'config file {process_file} not exists')
         exit(1)
     with open((config_dir / process_file), 'r') as file:
         config_process = json.load(file)
@@ -42,7 +46,7 @@ def get_configs(config_dir: Path, asset_file: Path) ->list:
     for filename in config_files:
         config_file = config_dir / filename
         if not config_file.exists():
-            logging.error(f'config file {config_file} not exists')
+            logger.error(f'config file {config_file} not exists')
             exit(1)    
 
         with open((config_dir / filename), 'r') as file:
@@ -62,6 +66,35 @@ def replace_file_pattern(filepath: str, path: Path, sub_path: Path, name: str, a
         return filename
     else:
         return updated_string
+
+def handle_output(result, name):
+    rc = result.returncode
+
+    # 1) Die ganze stderr als Error, wenn returncode != 0
+    if rc != 0:
+        # log the return code
+        logger.error("Command %s exited with return code %d", name, rc)
+        # log all stdout as debug, falls du Details brauchst
+        if result.stdout:
+            logger.debug("=== %s stdout ===\n%s", name, result.stdout.rstrip())
+        # log stderr as error (rot)
+        logger.error("=== %s stderr ===\n%s", name, result.stderr.rstrip())
+        return
+
+    # 2) Wenn returncode == 0, aber stderr nicht leer → nur Warnings
+    if result.stderr:
+        # split lines and detect keyword "warning"
+        for line in result.stderr.splitlines():
+            # If the line itself mentions 'warning', treat as warning
+            if 'warning' in line.lower():
+                logger.warning("=== %s warning === %s", name, line)
+            else:
+                # sonst immer noch als Info oder Error loggen?
+                logger.error("=== %s stderr (non-warning) === %s", name, line)
+
+    # 3) Alles, was auf stdout kam, bleibt Info (grün)
+    if result.stdout:
+        logger.info("=== %s stdout ===\n%s", name, result.stdout.rstrip())    
 
 
 def execute_script(script_config: dict, asset_file: Path, output_dir: Path):    
@@ -126,21 +159,14 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
 
     # run
     try:
-        #logging.info(script_call)
-        logging.info(f">>>>>>>>>>>>>>>>>>>  start command {script_config['name']}")
+        #logger.info(script_call)
+        logger.info(f">>>>>>>>>>>>>>>>>>>  start command {script_config['name']}")
         result = subprocess.run(script_call, check=True, capture_output=True, text=True)
-        if result.stdout or result.stderr:
-            logging.info(f" === command {script_config['name']} succeeded with output:")        
-            logging.info(result.stdout)  # print default output from sub process
-            logging.info(result.stderr)  # print logging output from sub process        
-        logging.info(f"<<<<<<<<<<<<<<<<<<< end command {script_config['name']}")
-        logging.info("")
-        logging.info("")
+        handle_output(result, script_config['name'] )            
+        logger.info(f"<<<<<<<<<<<<<<<<<<< end command {script_config['name']}")
     except subprocess.CalledProcessError as e:
-        logging.error(f"!!!!!!!!!!!! Command {script_config['name']} failed with return code {e.returncode}")
-        logging.error(f"Error output: {e.stderr}")
-        logging.error(f"Error output: {e.stdout}")
-        logging.error(f"!!!!!!!!!!!!!!!!!!!!!!!!")
+        logger.error(f"!!!!!!!!!!!! Command {script_config['name']} failed with return code {e.returncode}")        
+        handle_output(e, script_config['name'] )
         exit(1)
 
 
@@ -165,7 +191,7 @@ def get_asset_type(asset_type: Path) -> str:
     if asset_type in asset_types:
         return asset_types[asset_type]
     
-    logging.error(f'asset type not found {asset_type}')
+    logger.error(f'asset type not found {asset_type}')
     exit(1)
 
 
@@ -181,22 +207,22 @@ def main():
     asset_file = Path(args.filename)
     asset_file = asset_file.resolve()
     if not asset_file.exists():
-        logging.error(f'asset file {asset_file} not exists')
+        logger.error(f'asset file {asset_file} not exists')
         exit(1)
-    logging.info(f'asset file {asset_file}')
+    logger.info(f'asset file {asset_file}')
 
     # load all configs that are applicable to the asset type 
     config_dir = Path(args.config)
     config_dir = config_dir.resolve()
     if not config_dir.is_dir():
-        logging.error(f'config path {config_dir} not exists')
+        logger.error(f'config path {config_dir} not exists')
         exit(1)
     applicable_scripts = get_configs(config_dir, asset_file)
 
     # create, cleanup output directory for the asset file
     asset_name = asset_file.stem
     if '.' in asset_name:
-        logging.error(f"File {asset_name} has points in name! Not supported!")
+        logger.error(f"File {asset_name} has points in name! Not supported!")
         exit(1)
 
     output_dir = Path(args.out)

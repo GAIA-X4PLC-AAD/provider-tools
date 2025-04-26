@@ -8,6 +8,8 @@ from extractor import get_position_from_osm, proj4_to_epsg, convert_to_LatLon
 import logging
 import extractor
 
+logger = logging.getLogger(__name__)
+
 version = 'v4'
 
 
@@ -98,7 +100,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         general_data_dict['general:recordingTime'] = convert_date_time(data['header']['date'], supported_date_syntax) if check_data(root,".//header","date") else default_value
         hasDataResource_dict['general:data'] = general_data_dict
     except:
-        logging.error('cannot extract date')
+        logger.error('cannot extract date')
     
     # parse string of georeference
     # set all values to default
@@ -381,29 +383,29 @@ def get_elevation_range(root, elevations, list_of_lengths):
 #######################################################################################################################
 def extract_meta_data(file: Path) ->Tuple[bool, dict]:
     # read file
-    logging.debug(f'Loading input file {file.absolute()}')
+    logger.debug(f'Loading input file {file.absolute()}')
     try: 
         with open(file, 'r') as f:
             _ = f.read()
     except:
-        logging.exception(f'Cannot read file {file.absolute()}')
+        logger.exception(f'Cannot read file {file.absolute()}')
         return False
     
     # parse xml
     try: 
         root = etree.parse(str(file), etree.XMLParser(dtd_validation=False))
     except:
-        logging.exception(f'Cannot parse XML from file {file.absolute()}')
+        logger.exception(f'Cannot parse XML from file {file.absolute()}')
         return False
     
     # ask in file dialog for file with given file extension -->close program if interrupted
     try:
         attributes = get_meta_data(file, "Unknown")
     except:
-        logging.exception(f'Cannot extract from file {file.absolute()}')
+        logger.exception(f'Cannot extract from file {file.absolute()}')
         return False
     
-    logging.info(f'Extract from file {file}')
+    logger.info(f'Extract from file {file}')
     return True, attributes
     
 

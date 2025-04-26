@@ -8,7 +8,7 @@ import logging
 # mapping table
 def load_mapping_table(mapping_file):
     if not Path(mapping_file).exists():
-        logging.info(f"file '{mapping_file}' not exist.")
+        logger.info(f"file '{mapping_file}' not exist.")
         return None
     with open(mapping_file, 'r') as f:
         node_mapping = json.load(f)

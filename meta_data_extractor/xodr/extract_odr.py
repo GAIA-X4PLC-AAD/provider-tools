@@ -94,13 +94,13 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     #meta_data_dict['vendor_name'] = data['header']['vendor'] if check_data(root, ".//header","vendor") else default_value
     # convert to datetime object
     hasDataResource_dict = dict()
-    general_data_dict = dict()
-    try:        
-        supported_date_syntax = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y", "%Y/%m/%d", "%d.%m.%Y", "%m/%d/%Y"]
-        general_data_dict['general:recordingTime'] = convert_date_time(data['header']['date'], supported_date_syntax) if check_data(root,".//header","date") else default_value
-        hasDataResource_dict['general:data'] = general_data_dict
-    except:
-        logger.error('cannot extract date')
+    #general_data_dict = dict()
+    #try:        
+        #supported_date_syntax = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y", "%Y/%m/%d", "%d.%m.%Y", "%m/%d/%Y"]
+        #general_data_dict['general:recordingTime'] = convert_date_time(data['header']['date'], supported_date_syntax) if check_data(root,".//header","date") else default_value
+        #hasDataResource_dict['general:data'] = general_data_dict
+    #except:
+    #    logger.error('cannot extract date')
     
     # parse string of georeference
     # set all values to default
@@ -188,14 +188,14 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         bounding_data_dict['georeference:yMin'] = str(bounding_dict['yMin'])
         bounding_data_dict['georeference:xMax'] = str(bounding_dict['xMax'])
         bounding_data_dict['georeference:yMax'] = str(bounding_dict['yMax'])
-        projection_location_dict['georeference:boundingBox'] = bounding_data_dict
+        projection_location_dict['georeference:hasBoundingBox'] = bounding_data_dict
 
         # get 0,0 point in unit and convert to lat lon
         lat, lon = convert_to_LatLon(0.0, 0.0, geo_reference)
         origin_dict = dict()
         origin_dict['georeference:lat'] = str(lat)
         origin_dict['georeference:lon'] = str(lon)
-        geodetic_ref_system_dict['georeference:origin'] = origin_dict
+        geodetic_ref_system_dict['georeference:hasOrigin'] = origin_dict
 
         # get country, state, town from OSM
         center_lon = (bounding_dict['xMin'] + bounding_dict['xMax']) * 0.5
@@ -204,14 +204,13 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         viewpoint_dict = dict()
         viewpoint_dict['georeference:lat'] = str(center_lat)
         viewpoint_dict['georeference:lon'] = str(center_lon)
-        geodetic_ref_system_dict['georeference:viewpoint'] = viewpoint_dict  
+        geodetic_ref_system_dict['georeference:hasViewPoint'] = viewpoint_dict  
         georeference_dict['georeference:hasGeodeticReferenceSystem'] = geodetic_ref_system_dict
 
     ###################################################################################################################
     # unfinished meta data
     
     #meta_data_dict['range_of_modeling'] = 0.0 #"Wie ermittelt man das?"
-    #meta_data_dict['general:recordingTime'] = meta_data_dict['vendor_date']#.strftime("%Y-%m-%d %H:%M:%S")
     # TODO get from traffic rule
     #content_dict['hdmap:trafficDirection'] = ""
     #content_dict['hdmap:levelOfDetail'] = ""
@@ -221,7 +220,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     
     meta_data_dict = dict()
     meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:HdMap:' + extractor.generate_global_unique_id()
-    meta_data_dict['shacle_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
+    meta_data_dict['shacl_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     meta_data_dict[f'{get_schema_name().lower()}:hasDataResource'] = hasDataResource_dict    
 
     hasDataResourceExtension_dict = dict()

@@ -51,7 +51,7 @@ def extract_meta_data(file: Path) ->Tuple[bool, dict]:
     
     data = {}
     data['did'] = 'did:web:registry.gaia-x.eu:EnvironmentModel:' + extractor.generate_global_unique_id()
-    data['shacle_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
+    data['shacl_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     data[f'{get_namespace()}:{get_schema_name().lower()}'] = attributes
     
     logger.info(f'Extract from file {file}')

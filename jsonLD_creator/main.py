@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 # global values
 g_sh_url = 'http://www.w3.org/ns/shacl#'
+g_gx_url = 'https://registry.lab.gaia-x.eu/development/api/trusted-shape-registry/v1/shapes/jsonld/trustframework#'
 g_envited_x_str = 'envited-x'
 g_envited_url = 'https://ontologies.envited-x.net'
 g_w3_url = 'http://www.w3.org'
@@ -180,7 +181,7 @@ def get_value_type(key : str, shacl_values : dict) -> str:
 def create_property(namespace : str, property_name : str, value, type: str, name: str, lsonLD_dict: dict, shacl_values : dict, level : int):
     key = create_namespace_name(namespace, property_name)
     # debug
-    if key == 'manifest:hasAccessRole':
+    if key == 'gx:name':
         test = 0
 
     value_key = get_value_type(key, shacl_values)
@@ -212,12 +213,21 @@ def create_property(namespace : str, property_name : str, value, type: str, name
 # compare with registered prefixes, e.g  @prefix manifest: <https://ontologies.envited-x.net/manifest/v4/ontology#>
 # to manifest, hasManifestReference
 def get_namespace_name_from_url(url: str) -> Tuple[str, str]:
+    # serach in own prefixes
     prefixes = config.JSON_OUT['@context']
     for ns_key, uri_ref in prefixes.items():
         prefix = str(uri_ref)
         if url.startswith(prefix):
             shape_name = url[len(prefix):]
             return ns_key, shape_name
+        
+    # try in other shacls
+    for key, value in config.SHACLS.items():
+        for ns_key, uri_ref in value['prefixes'].items():
+            prefix = str(uri_ref)
+            if url.startswith(prefix):
+                shape_name = url[len(prefix):]
+                return ns_key, shape_name
     return None, None
 
 
@@ -290,11 +300,13 @@ def register_key(key : str, values : dict, meta_data: dict, nodes : list, namesp
             if type_url:
                 namespace_type, type = get_namespace_name_from_url(type_url)
                 create_property(namespace, shapename, meta_data[key], type, None, lsonLD_dict, values, level)
+                del meta_data[key]
             else:
                 name_url = get_value("name", values)
                 name = get_name_from_url(name_url) if name_url else None
                 property_name = create_namespace_name(namespace, name) if name is not None else None
                 create_property(namespace, shapename, meta_data[key], None, property_name, lsonLD_dict, values, level)
+                del meta_data[key]
         else:
             created_node = None
             for node in nodes:
@@ -312,7 +324,8 @@ def register_key(key : str, values : dict, meta_data: dict, nodes : list, namesp
                 nodes_sub = list(node.values())[0] if isinstance(node, dict) else None
                 lsonLD_node = created_node
                 process_node(shape_value_sub, meta_data[key], nodes_sub, lsonLD_node, level + 1)
-
+                if not meta_data[key]:
+                    del meta_data[key]
 
     elif is_required:
         # TODO write empty node
@@ -432,12 +445,15 @@ def process_graph(schema_namespace, schema_name, meta_data):
 
         config.JSON_OUT['@context'] = shacl_graph_data['prefixes']
         
-        # add id and type
+        # add did
         if 'did' in meta_data:
             config.JSON_OUT['@id'] = meta_data['did']
+            del meta_data['did']
         else:
             logger.error(f'did not found in extraced data!')
             exit(1)
+
+        # add type
         name = get_name_from_url(schema_name)
         name = name.replace('Shape', '')
         shacle_namespace = 'manifest' if schema_namespace == g_envited_x_str else schema_namespace
@@ -449,6 +465,10 @@ def process_graph(schema_namespace, schema_name, meta_data):
             logger.error(f'did not found {schema_name} in shacl {schema_namespace}!')
             exit(1)
         process_node(shape_value, meta_data, None, config.JSON_OUT, 0)
+
+        if meta_data:
+            logger.warning("non-transferring values:")
+            logger.warning(json.dumps(meta_data, indent=4, ensure_ascii=False))
 
         # end end remove envited-x prefix
         if g_envited_x_str in config.JSON_OUT['@context']:
@@ -557,7 +577,9 @@ def main():
         shacl_folder = Path('shacles')
         if shacl_folder.exists():
             shutil.rmtree(shacl_folder)
-    shacle_namespace, shacle_name = get_namespace(claim_data['shacle_type'])
+    shacle_namespace, shacle_name = get_namespace(claim_data['shacl_type'])    
+    del claim_data['shacl_type']
+
     ontology_path = args.ontology + '/'
     shacl_definitions = {}
     url_path = f'{ontology_path}{shacle_namespace}/'
@@ -567,8 +589,9 @@ def main():
     # get gaiaX/envited prefixes
     shacl_data = shacl_definitions[shacle_namespace]
     prefixes = get_prefixes(shacl_data['graph'])
-    # add sh prefix
+    # add special prefixes
     prefixes["sh"] = g_sh_url
+    prefixes["gx"] = g_gx_url
 
     # and download additional shacles
     for key, value in prefixes.items():

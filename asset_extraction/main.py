@@ -9,8 +9,8 @@ import shutil
 import logging
 
 # configure logging once for the entire application
-DEBUG = False
-setup_logging(logging.INFO)
+DEBUG = True
+setup_logging(logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
 
 asset_types = {

@@ -494,7 +494,7 @@ def main():
     # create json file for jsonLD creator
     data = {}
     data['did'] = 'did:web:registry.gaia-x.eu:Manifest:' + generate_global_unique_id()
-    data['shacle_type'] = f'{g_envitedX}::{g_envited_url}{g_envitedX}/{g_version}/ontology#ManifestShape'
+    data['shacl_type'] = f'{g_envitedX}::{g_envited_url}{g_envitedX}/{g_version}/ontology#ManifestShape'
     data_group = []
     data['manifest:hasArtifacts'] = data_group
     for sub_folder in data_path.iterdir():

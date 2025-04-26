@@ -3,7 +3,7 @@
 import logging
 from colorlog import ColoredFormatter
 
-def setup_logging(level=logging.INFO):
+def setup_logging(level=logging.DEBUG):
     """
     # Set up root logger with colored output.
     # - Uses colorlog.ColoredFormatter for automatic color mapping.

@@ -5,29 +5,31 @@ import logging
 import argparse
 import requests
 
-DEBUG = True
+DEBUG = False
+
+logger = logging.getLogger(__name__)
 
 def trigger_open_sd_wizard(endpoint_url):
     try:
         response = requests.post(endpoint_url)
         if response.status_code == 200:
-            print("Triggered the SD Wizard successfully")
+            logger.info("Triggered the SD Wizard successfully")
         else:
-            print(f"Failed to trigger SD Wizard: {response.status_code}")
+            logger.error(f"Failed to trigger SD Wizard: {response.status_code}")
     except Exception as e:
-        print(f"Error triggering SD Wizard: {e}")
+        logger.exception(f"Error triggering SD Wizard: {e}")
 
 def post_filepath(file_path, endpoint_url, output_path = None):
     try:
         data = {"file_path": file_path, 'meta_data_location': output_path} if output_path is not None else {"file_path": file_path}
         response = requests.post(endpoint_url,json = data)
         if response.status_code == 200:
-            print("Tools successfully sent file path: "+ file_path)
+            logger.info("Tools successfully sent file path: "+ file_path)
             if output_path is not None : print("and meta data location: " + output_path)
         else:
-            print(f"Tools got sending error: {response.status_code}")
+            logger.error(f"Tools got sending error: {response.status_code}")
     except Exception as e:
-        print(f"Error sending file path: {e}")
+        logger.exception(f"Error sending file path: {e}")
         
 def check_combined_json(endpoint_url):
     if DEBUG:
@@ -36,13 +38,13 @@ def check_combined_json(endpoint_url):
     while True:
         response = requests.get(endpoint_url)  # Repeat the GET request
         if response.status_code == 204:
-            print("File is not ready yet, sleeping 10 seconds ...")
+            logger.warning("File is not ready yet, sleeping 10 seconds ...")
             time.sleep(10)
         elif response.status_code == 200:
-            print("File is ready, continue execution")
+            logger.info("File is ready, continue execution")
             return  # Exit the function when the file is ready
         else:
-            print(f"Tools got receiving error: {response.status_code}")
+            logger.error(f"Tools got receiving error: {response.status_code}")
             break  # Exit the loop if there is an error
         
 def main():

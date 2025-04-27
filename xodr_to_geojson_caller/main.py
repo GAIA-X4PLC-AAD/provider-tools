@@ -6,7 +6,7 @@ import argparse
 import subprocess
 import logging
 
-DEBUG = True
+DEBUG = False
 
 logger = logging.getLogger(__name__)
 

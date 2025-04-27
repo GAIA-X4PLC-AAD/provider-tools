@@ -9,7 +9,7 @@ import shutil
 import logging
 
 # configure logging once for the entire application
-DEBUG = True
+DEBUG = False
 setup_logging(logging.DEBUG if DEBUG else logging.INFO)
 logger = logging.getLogger(__name__)
 

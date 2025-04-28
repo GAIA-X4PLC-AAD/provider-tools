@@ -1,7 +1,5 @@
-if __name__ == '__main__':
-    from extractor import extract
-else:
-    from .extractor import extract
+   
+from .extractor import extract
 from pathlib import Path
 
 import argparse

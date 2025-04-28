@@ -71,12 +71,6 @@ def replace_file_pattern(filepath: str, path: Path, sub_path: Path, name: str, a
 def execute_script(script_config: dict, asset_file: Path, output_dir: Path):    
     # prepare script path
     script_path = Path(script_config['params']['call'])
-    if not script_path.is_absolute():  # is no absolute path
-        parent_dir = Path(__file__).parent.parent
-        #script_path = script_path.resolve()  # convert to absolute
-        script_path = (parent_dir / script_path).resolve()
-    if not script_path.exists():
-        raise FileNotFoundError(f"Script not found: {script_path}")
     
     # prepare output path
     if not output_dir.is_absolute():  # is no absolute path
@@ -96,9 +90,12 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
     if script_config['environment type'] == "python":
         script_call.append('-X')
         script_call.append('frozen_modules=off')
+        script_call.append('-m') # as module
     script_call.append(script_path)
 
     asset_type = get_asset_type(get_asset_type_extension(asset_file))     
+
+    project_root = Path(__file__).parent.parent
 
     # input
     if 'input' in script_config['params']:
@@ -132,7 +129,7 @@ def execute_script(script_config: dict, asset_file: Path, output_dir: Path):
     try:
         #logger.info(script_call)
         logger.info(f">>>    start command {script_config['name']}")
-        result = subprocess.run(script_call, check=True, capture_output=True, text=True)
+        result = subprocess.run(script_call, check=True, capture_output=True, text=True, cwd=str(project_root))
         handle_output(result, script_config['name'] )            
         logger.info(f"   <<< end command {script_config['name']}")
     except subprocess.CalledProcessError as e:

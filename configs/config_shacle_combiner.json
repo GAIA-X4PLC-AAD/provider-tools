@@ -3,7 +3,7 @@
 	"environment type" : "python",
 	"data folder" : "metadata",
 	"params" : 	{
-		"call" : "shacl_combiner/main.py",
+		"call" : "shacl_combiner.main",
 		"input" : {"" : "{path}/{sub_path}/{asset_type}_instance.json"},
 		"output" : {"-out" : "{path}/temp"}
 	}

@@ -2,8 +2,9 @@ from lxml import etree
 from pathlib import Path
 
 import argparse
-import io_functions as io
 import logging
+import json
+import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ def calcExtrema(element, nodename):
             max_value = value
     return {'min': min_value, 'max': max_value}
 
+
 # reduce xml to json functions
 def extract_attributes(element, attributes):
     #return {attr: element.get(attr) for attr in attributes if element.get(attr) is not None}
@@ -37,6 +39,7 @@ def extract_attributes(element, attributes):
         if element_attr is not None:
             attres[attr] = element_attr
     return attres
+
 
 def process_element(element, mapping):
     tag = element.tag
@@ -75,7 +78,75 @@ def process_element(element, mapping):
         return {tag: node_data}
     else:
         return None     
+    
+
+def read_json_file(file_path, binary):
+    if binary:
+        with open(file_path, 'rb') as f:
+            json_data = pickle.load(f)
+    else:
+        with open(file_path, 'r') as file:
+            json_data_binary = file.read()
+            json_data = json.loads(json_data_binary)
+    return json_data       
+
+
+# mapping table
+def load_mapping_table(mapping_file):
+    if not Path(mapping_file).exists():
+        logger.info(f"file '{mapping_file}' not exist.")
+        return None
+    with open(mapping_file, 'r') as f:
+        node_mapping = json.load(f)
+    return node_mapping
+
+
+def json_to_xml_add_attributes_and_children(parent, data):
+    for key, value in data.items():
+        if isinstance(value, dict):
+            child = etree.SubElement(parent, key)
+            json_to_xml_add_attributes_and_children(child, value)
+        elif isinstance(value, list):
+            json_to_xml_handle_list(parent, key, value)
+        else:
+            parent.set(key, str(value))
+
+
+def json_to_xml_handle_list(parent, key, data_list):
+    for item in data_list:
+        element = etree.SubElement(parent, key)
+        if isinstance(item, dict):
+            json_to_xml_add_attributes_and_children(element, item)
+        else:
+            element.text = str(item)
+
+
+def json_to_xml(json_data):
+    root = etree.Element("OpenDRIVE")
+
+    for item in json_data:
+        for key, value in item.items():
+            element = etree.SubElement(root, key)
+            if isinstance(value, dict):
+                json_to_xml_add_attributes_and_children(element, value)
+            elif isinstance(value, list):
+                json_to_xml_handle_list(element, key, value)
+            else:
+                element.text = str(value)
+
+    return root
+
+
+# io functions for JSON 
+def save_json(data, file_name, binary):
+    if binary:
+        with open(file_name, 'wb') as f:
+            pickle.dump(data, f)
+    else:
+        with open(file_name, 'w') as f:
+            json.dump(data, f, indent=4)
   
+
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='reduces the original xml to relevant nodes and attributes (see mapping_tables) and writes a binary json for the extended search.')   
     parser.add_argument('filename', type=str,help='filename of asset in xml format.')
@@ -99,7 +170,7 @@ def main():
     mapping_name = f'mapping_tables/mapping_{asset_type}.json'
     script_dir = Path(__file__).parent.resolve()
     mapping_file = script_dir / mapping_name
-    node_mapping = io.load_mapping_table(mapping_file)
+    node_mapping = load_mapping_table(mapping_file)
     if not node_mapping:
         exit(1)
 
@@ -115,17 +186,16 @@ def main():
             json_data.append(result)
 
     # write to json file
-    #binary = is_binary#args.binary
-    io.save_json(json_data, output_json_file, True)
+    save_json(json_data, output_json_file, True)
 
     # test to read json, convert to xml and find nodes
     debug = False
     if debug:
         # read json
         binary = False
-        json_read_data = io.read_json_file(output_json_file, binary)
+        json_read_data = read_json_file(output_json_file, binary)
         # convert to xml
-        root_read = io.json_to_xml(json_read_data)
+        root_read = json_to_xml(json_read_data)
         
         # write as xml
         xml_str = etree.tostring(root_read, pretty_print=True, encoding='utf-8', xml_declaration=True)

@@ -120,13 +120,13 @@ def extract(file: Path, output_file: Path) -> bool:
     files = [extrator_file for extrator_file in format_path.iterdir() if extrator_file.name.endswith('.py') and extrator_file.name != '__init__.py' and extrator_file.name.startswith('extract_')]
     if len(files) == 0:
         return False
-    module_name = Path(files[0]).relative_to(Path(__file__).parent).as_posix().replace('/', '.').replace('.py', '')
+    module_name = 'meta_data_extractor.' + Path(files[0]).relative_to(Path(__file__).parent).as_posix().replace('/', '.').replace('.py', '')
     required_functions = ['extract_meta_data', 'get_description', 'get_schema_name', 'get_namespace']
     logger.debug(f'Loading extractor {{{module_name}}}')
     try:
         extract_module = __import__(module_name, fromlist=required_functions)
     except:
-        logger.exception(f'Could not load extract file {module_name}')
+        logger.exception(f'Could not load extract file from module {module_name}')
         return False
     
     # check required functions    

@@ -3,7 +3,7 @@
 	"environment type" : "python",
 	"data folder" : "",
 	"params" : 	{
-		"call" : "jsonLD_creator/main.py",
+		"call" : "jsonLD_creator.main",
 		"input" : {"" : "{path}/temp/{name}_structure.json"},
 		"output" : {"-out" : "{path}/manifest_reference.json"},
 		"additional" : {

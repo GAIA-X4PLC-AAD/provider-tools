@@ -3,7 +3,7 @@
 	"environment type" : "python",
 	"data folder" : "metadata",
 	"params" : 	{
-		"call" : "asset_reducer/main.py",
+		"call" : "asset_reducer.main",
 		"output" : {"-out" : "{path}/{sub_path}/{name}.bjson"},
 		"output format" : "bjson"
 	}

@@ -3,7 +3,7 @@
 	"environment type" : "python",
 	"data folder" : "metadata",
 	"params" : {
-		"call" : "jsonLD_creator/main.py",
+		"call" : "jsonLD_creator.main",
 		"input" : {"" : "{path}/../../uploads/statistic_3dModel.json"},
 		"output" : {"-out" : "{path}/{sub_path}/{asset_type}_instance.json"},
 		"additional" : {

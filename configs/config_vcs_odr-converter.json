@@ -3,7 +3,7 @@
 	"environment type" : "python",
 	"data folder" : "media",
 	"params" : 	{
-		"call" : "xodr_to_geojson_caller/main.py",
+		"call" : "xodr_to_geojson_caller.main",
 		"output" : {"-out" : "{path}/{sub_path}/3d_preview/detailRoadNetwork.geojson"},
         "additional" : {
 			"-path" : "{path}/temp"

@@ -3,10 +3,9 @@ from lxml import etree
 from pathlib import Path
 from datetime import datetime
 from typing import Tuple
-from extractor import get_position_from_osm, proj4_to_epsg, convert_to_LatLon
+from ..extractor import get_position_from_osm, proj4_to_epsg, convert_to_LatLon, generate_global_unique_id
 
 import logging
-import extractor
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +218,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     
     
     meta_data_dict = dict()
-    meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:HdMap:' + extractor.generate_global_unique_id()
+    meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:HdMap:' + generate_global_unique_id()
     meta_data_dict['shacl_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     meta_data_dict[f'{get_schema_name().lower()}:hasDataResource'] = hasDataResource_dict    
 

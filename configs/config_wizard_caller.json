@@ -3,7 +3,7 @@
 	"environment type" : "python",
 	"data folder" : "metadata",
 	"params" : 	{
-		"call" : "wizard-caller/main.py",
+		"call" : "wizard-caller.main",
 		"input" : {"" : "{path}/{sub_path}/{asset_type}_instance.json"},
 		"output" : {"-out" : "{path}/{sub_path}/{asset_type}_instance.json"},
 		"additional" : {

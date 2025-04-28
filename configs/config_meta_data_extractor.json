@@ -3,7 +3,7 @@
 	"environment type" : "python",
 	"data folder" : "metadata",
 	"params" : 	{
-		"call" : "meta_data_extractor/main.py",
+		"call" : "meta_data_extractor.main",
 		"output" : { "-out" : "{path}/temp/{name}_extractor.json"}
 	}
 }

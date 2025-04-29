@@ -5,7 +5,7 @@
 	"params" : 	{
 		"call" : "jsonLD_creator.main",
 		"input" : {"" : "{path}/temp/{name}_extractor.json"},
-		"output" : {"-out" : "{path}/{sub_path}/{asset_type}_instance.json"},
+		"output" : {"-out" : "{path}/temp/{asset_type}_instance.json"},
 		"additional" : {
 			"-ontology" : "https://ontologies.envited-x.net/hdmap/v4/ontology"
 		}		

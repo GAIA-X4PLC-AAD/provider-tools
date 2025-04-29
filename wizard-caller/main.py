@@ -13,23 +13,23 @@ def trigger_open_sd_wizard(endpoint_url):
     try:
         response = requests.post(endpoint_url)
         if response.status_code == 200:
-            logger.info("Triggered the SD Wizard successfully")
+            print("Triggered the SD Wizard successfully")
         else:
-            logger.error(f"Failed to trigger SD Wizard: {response.status_code}")
+            print(f"Failed to trigger SD Wizard: {response.status_code}")
     except Exception as e:
-        logger.exception(f"Error triggering SD Wizard: {e}")
+        print(f"Error triggering SD Wizard: {e}")
 
 def post_filepath(file_path, endpoint_url, output_path = None):
     try:
         data = {"file_path": file_path, 'meta_data_location': output_path} if output_path is not None else {"file_path": file_path}
         response = requests.post(endpoint_url,json = data)
         if response.status_code == 200:
-            logger.info("Tools successfully sent file path: "+ file_path)
+            print("Tools successfully sent file path: "+ file_path)
             if output_path is not None : print("and meta data location: " + output_path)
         else:
-            logger.error(f"Tools got sending error: {response.status_code}")
+            print(f"Tools got sending error: {response.status_code}")
     except Exception as e:
-        logger.exception(f"Error sending file path: {e}")
+        print(f"Error sending file path: {e}")
         
 def check_combined_json(endpoint_url):
     if DEBUG:
@@ -38,13 +38,13 @@ def check_combined_json(endpoint_url):
     while True:
         response = requests.get(endpoint_url)  # Repeat the GET request
         if response.status_code == 204:
-            logger.warning("File is not ready yet, sleeping 10 seconds ...")
+            print("File is not ready yet, sleeping 10 seconds ...")
             time.sleep(10)
         elif response.status_code == 200:
-            logger.info("File is ready, continue execution")
+            print("File is ready, continue execution")
             return  # Exit the function when the file is ready
         else:
-            logger.error(f"Tools got receiving error: {response.status_code}")
+            print(f"Tools got receiving error: {response.status_code}")
             break  # Exit the loop if there is an error
         
 def main():

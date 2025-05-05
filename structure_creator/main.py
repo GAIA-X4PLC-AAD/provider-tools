@@ -396,10 +396,10 @@ def get_name_description_from_domainMetadata(filename, type):
 
     name = safe_get(data, [f"{type}:hasDataResource", "gx:name"])
     if not name:
-        logger.error(f'name : {type}:hasDataResource not exists in {filename}')
+        logger.error(f'name : {type}:hasDataResource -> gx:name not exists in {filename}')
     description = safe_get(data, [f"{type}:hasDataResource", "gx:description"])
     if not description:
-        logger.error(f'description: gx:name not exists in {filename}')
+        logger.error(f'description: {type}:hasDataResource -> gx:description not exists in {filename}')
 
     return name, description
 

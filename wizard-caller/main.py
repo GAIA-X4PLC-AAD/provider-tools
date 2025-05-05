@@ -4,6 +4,7 @@ import time
 import logging
 import argparse
 import requests
+import shutil
 
 DEBUG = False
 
@@ -64,14 +65,17 @@ def main():
         logger.error(f'shacl file not exist {shacl_file}')
         exit(1)
 
+    output_path = Path(args.out)         
+
     if DEBUG:
+        shutil.copy2(jsonLD_file, output_path)
+        logger.info(f'copy json ld to {output_path}')
         return
 
     # call sd wizrad in docker composed
     trigger_open_sd_wizard('http://localhost:3000/openSdWizard')
 
     # use jsonLD_file, shacl_file
-    output_path = Path(args.out) 
     post_filepath(str(jsonLD_file), 'http://localhost:3000/processJsonLDFile', str(output_path))
     post_filepath(str(shacl_file), 'http://localhost:3000/processShaclFile')
     # get enhanced jsonLD file

@@ -6,7 +6,7 @@ import argparse
 import requests
 import shutil
 
-DEBUG = False
+DEBUG = True
 
 logger = logging.getLogger(__name__)
 

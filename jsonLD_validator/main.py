@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 gaiax_url_part = 'GAIA-X4PLC-AAD/ontology-management-base'
 
 
-def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
+def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph, json_LD_file: Path):
     conforms, v_graph, v_text = validate(data_graph, shacl_graph=shacl_graph, 
                                          #data_graph_format='json-ld', 
                                          inference='rdfs', 
@@ -22,7 +22,7 @@ def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph):
                                          #debug=False
                                          )
     if not conforms:
-        logger.error('####### Validation errors: #######')
+        logger.error(f'####### Validation errors for {json_LD_file}: #######')
         #logger.error(v_text)        
         # Iterate over all ValidationResult nodes
         for result in v_graph.subjects(RDF.type, SH.ValidationResult):
@@ -70,7 +70,7 @@ def main():
             shacl_graph.set((s, SH.closed, Literal(True)))
 
     # validate
-    validate_jsonld_against_shacl(data_graph, shacl_graph)
+    validate_jsonld_against_shacl(data_graph, shacl_graph, json_LD_file)
 
 if __name__ == '__main__':
     main()

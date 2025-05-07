@@ -4,6 +4,7 @@ from multiformats import CID
 from multiformats.multihash import digest
 from PIL import Image
 from utils.utils import create_uuid
+from datetime import datetime
 
 import re
 import argparse
@@ -235,6 +236,14 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
 
         if os.path.exists(filename) and data_type != 'isManifest':
             file_meta_data['manifest:fileSize'] =  os.path.getsize(filename.as_posix()) 
+            creation_ts = filename.stat().st_ctime
+            creation_dt = datetime.fromtimestamp(creation_ts)
+            formatted_creation_data = creation_dt.isoformat(timespec="seconds")
+
+            if data_type == "isSimulationData":
+                file_meta_data['manifest:timestamp'] =  formatted_creation_data # TODO from extracted data
+            else:
+                file_meta_data['manifest:timestamp'] =  formatted_creation_data
             # create IPFS CIDv1 identifier   
             with open(filename, "rb") as f:
                 data = f.read()
@@ -418,6 +427,7 @@ def main():
     parser.add_argument('filename', help='filename of json file from frontend.')
     parser.add_argument('-out', help='json file for manifest.')
     parser.add_argument('-path', help='path to copy/parse data.')
+    parser.add_argument('-asset', help='filename to final asset json.')
     args = parser.parse_args()
 
     user_input_file = Path(args.filename)
@@ -440,6 +450,8 @@ def main():
     with open(user_input_file, 'r') as file:
         user_data = json.load(file)
 
+    manifest_uuid = create_uuid()
+
     # initialize asset_name
     asset_name, asset_extension = get_asset(user_data)
     if not asset_name or not asset_extension:
@@ -447,7 +459,7 @@ def main():
         exit(1)
     if asset_extension in asset_type:        
         asset_data = asset_type[asset_extension]
-        asset_did = f'did:web:registry.gaia-x.eu:{asset_data["category"]}:{create_uuid()}'
+        asset_did = f'did:web:registry.gaia-x.eu:{asset_data["category"]}:{manifest_uuid}'
 
     # copy files
     upload_folder = user_input_file.parent
@@ -539,6 +551,18 @@ def main():
     with open(filename_out, 'w') as f:
         json.dump(data, f, indent=4)
 
+    # replace manifest uuid in asset json
+    asset_json = Path(args.asset)
+    if not asset_json.is_absolute():
+        asset_json = data_path.resolve()
+    if not asset_json.exists():
+        logger.error(f'asset file {asset_json} not exists')
+        exit(1)
+
+    # replace with uuid in json
+    content = asset_json.read_text(encoding="utf-8")
+    content = content.replace("Manifest:uuid", f"Manifest:{manifest_uuid}")
+    asset_json.write_text(content, encoding="utf-8")
 
 if __name__ == '__main__':
     main()

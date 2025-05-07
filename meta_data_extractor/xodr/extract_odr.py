@@ -240,7 +240,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
         "manifest:filePath": "./manifest_reference.json",
         "manifest:mimeType": "application/ld+json"
     }
-    hasManifest_dict['manifest:iri'] = 'did:web:registry.gaia-x.eu:Manifest:TODO'
+    hasManifest_dict['manifest:iri'] = 'did:web:registry.gaia-x.eu:Manifest:uuid'
     hasManifest_dict['skos:note'] = 'Ensure that manifest_reference.json contains all required categories: simulationData, documentation, metadata, media.'
     hasManifest_dict['sh:conformsTo'] = [
         "https://ontologies.envited-x.net/envited-x/v2/ontology#",

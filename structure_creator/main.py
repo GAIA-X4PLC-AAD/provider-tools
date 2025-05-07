@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 from multiformats import CID
 from multiformats.multihash import digest
 from PIL import Image
+from utils.utils import create_uuid
 
 import re
 import argparse
@@ -355,8 +356,8 @@ def update_readme(file_path_in: Path, file_path_out: Path, name_value: str, desc
     content = file_path_in.read_text(encoding="utf-8")
     
     # Replace the placeholders with the given values
-    content = content.replace("[NAME]", name_value)
-    content = content.replace("[DESCRIPTION]", description_value)
+    content = content.replace("< envited-x:DataResource:name >", name_value)
+    content = content.replace("< envited-x:DataResource:description >", description_value)
     
     # Write the updated content back to the file using UTF-8 encoding
     file_path_out.write_text(content, encoding="utf-8")
@@ -412,11 +413,6 @@ def get_asset(user_data):
             return asset_name, asset_extension
     return None, None
 
-def generate_global_unique_id(length=36) -> str:
-    # Alphabet enthält Groß- und Kleinbuchstaben, Ziffern und den Bindestrich
-    alphabet = string.ascii_letters + string.digits + '-'
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
-
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='the folder structure is completed from the user info and a metadata table is created for the manifest')   
     parser.add_argument('filename', help='filename of json file from frontend.')
@@ -451,7 +447,7 @@ def main():
         exit(1)
     if asset_extension in asset_type:        
         asset_data = asset_type[asset_extension]
-        asset_did = f'did:web:registry.gaia-x.eu:{asset_data["category"]}:{generate_global_unique_id()}'
+        asset_did = f'did:web:registry.gaia-x.eu:{asset_data["category"]}:{create_uuid()}'
 
     # copy files
     upload_folder = user_input_file.parent
@@ -493,7 +489,7 @@ def main():
 
     # create json file for jsonLD creator
     data = {}
-    data['did'] = 'did:web:registry.gaia-x.eu:Manifest:' + generate_global_unique_id()
+    data['did'] = 'did:web:registry.gaia-x.eu:Manifest:' + create_uuid()
     data['shacl_type'] = f'{g_envitedX}::{g_envited_url}{g_envitedX}/{g_version}/ontology#ManifestShape'
     data_group = []
     data['manifest:hasArtifacts'] = data_group
@@ -524,7 +520,11 @@ def main():
         path.mkdir()
 
     # create readme
-    readme_template = Path(__file__).parent.resolve() / 'README_template.md'
+    url = "https://raw.githubusercontent.com/GAIA-X4PLC-AAD/ontology-management-base/main/envited-x/README.md"
+    script_path = Path(__file__).resolve()
+    readme_template = script_path.parent / 'README_template.md'
+    download_readme(url, readme_template)    
+    #readme_template = Path(__file__).parent.resolve() / 'README_template.md'
     if asset_extension in asset_type:
         # get name + description from {asset_type}_instance.json
         classname = asset_type[asset_extension]['classname']

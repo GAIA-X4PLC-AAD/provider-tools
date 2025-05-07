@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from lxml import etree
 from enum import Enum
+from utils.utils import create_uuid
 
 import xml.etree.ElementTree as ET
 import logging
@@ -11,7 +12,6 @@ import typing
 import json
 import uuid
 import os
-import extractor
 
 logger = logging.getLogger(__name__)
 
@@ -1407,7 +1407,7 @@ def get_osc_meta_data(meta_data_dict: dict, osc: OpenSCENARIO, file_path: Path, 
 def get_meta_data(osc: OpenSCENARIO, file_path: Path, default_value: str = "Unknown", unknown_unit: str = "Unknown Unit") -> dict:
     
     meta_data_dict = dict()
-    meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:Scenario:' + extractor.generate_global_unique_id()
+    meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:Scenario:' + create_uuid()
     meta_data_dict['shacl_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     get_general_meta_data(meta_data_dict, osc, file_path, default_value, unknown_unit)
     get_osc_meta_data(meta_data_dict, osc, file_path, default_value, unknown_unit)

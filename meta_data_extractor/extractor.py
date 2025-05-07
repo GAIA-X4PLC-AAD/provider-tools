@@ -5,8 +5,6 @@ from pyproj import CRS, Transformer
 
 import logging
 import json
-import secrets
-import string
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +91,6 @@ def convert_to_LatLon(x, y, proj4):
     transformer = Transformer.from_proj(proj4, 'epsg:4326')  # WGS84
     lon, lat = transformer.transform(x, y)
     return lon, lat
-
-def generate_global_unique_id(length=36) -> str:
-    # Alphabet enthält Groß- und Kleinbuchstaben, Ziffern und den Bindestrich
-    alphabet = string.ascii_letters + string.digits + '-'
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 def datetime_handler(x):
     if isinstance(x, datetime.datetime):

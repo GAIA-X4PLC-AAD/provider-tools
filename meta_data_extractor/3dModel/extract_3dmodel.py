@@ -1,9 +1,9 @@
 from typing import Tuple
 from pathlib import Path
+from utils.utils import create_uuid
 
 import json
 import logging
-import extractor
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def extract_meta_data(file: Path) ->Tuple[bool, dict]:
         return False
     
     data = {}
-    data['did'] = 'did:web:registry.gaia-x.eu:EnvironmentModel:' + extractor.generate_global_unique_id()
+    data['did'] = 'did:web:registry.gaia-x.eu:EnvironmentModel:' + create_uuid()
     data['shacl_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     data[f'{get_namespace()}:{get_schema_name().lower()}'] = attributes
     

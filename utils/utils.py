@@ -5,6 +5,7 @@ from rdflib import Graph
 import json
 import requests
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -83,3 +84,7 @@ def load_jsonld_file(jsonld_file : Path):
         data = json.load(f)
     data_graph.parse(data=json.dumps(data), format='json-ld')
     return data_graph
+
+def create_uuid() -> str:
+    random_uuid = uuid.uuid4()   # e.g. 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+    return str(random_uuid)

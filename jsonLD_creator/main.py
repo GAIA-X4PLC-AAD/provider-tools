@@ -502,8 +502,10 @@ def process_graph(schema_namespace, schema_name, meta_data):
         process_node(shape_value, meta_data, None, config.JSON_OUT, 0)
 
         if meta_data:
-            logger.warning("non-transferring values:")
-            logger.warning(json.dumps(meta_data, indent=4, ensure_ascii=False))
+            hasOnlyRecordingTime = True if len(meta_data) == 1 and 'recordingTime' in meta_data else False
+            if not hasOnlyRecordingTime:
+                logger.warning("non-transferring values:")
+                logger.warning(json.dumps(meta_data, indent=4, ensure_ascii=False))
 
         # end end remove envited-x prefix
         if g_envited_x_str in config.JSON_OUT['@context']:

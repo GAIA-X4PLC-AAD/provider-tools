@@ -221,7 +221,7 @@ def get_mime_type(category: str, extension: str) -> str:
     return None
 
 
-def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: str):
+def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: str, asset_info : dict):
     file_data = {}
     file_data['manifest:hasAccessRole'] = 'manifest:' + role
     file_data['manifest:hasCategory'] = 'manifest:' + data_type
@@ -241,7 +241,9 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
             formatted_creation_data = creation_dt.isoformat(timespec="seconds")
 
             if data_type == "isSimulationData":
-                file_meta_data['manifest:timestamp'] =  formatted_creation_data # TODO from extracted data
+                if asset_info and 'recordingTime' in asset_info:
+                    formatted_creation_data = asset_info['recordingTime']
+                file_meta_data['manifest:timestamp'] =  formatted_creation_data
             else:
                 file_meta_data['manifest:timestamp'] =  formatted_creation_data
             # create IPFS CIDv1 identifier   
@@ -272,7 +274,7 @@ def create_file_data(filename: Path, abs_data_path: Path, data_type: str, role: 
     return file_data
 
 def register_licence(data: dict, filename: Path, abs_data_path: Path, category: str, role: str, data_type=None):
-    data = create_file_data(filename, abs_data_path, category, role)
+    data = create_file_data(filename, abs_data_path, category, role, None)
     if data_type:
         if data_type in data:
             data[data_type].extend(data)
@@ -284,7 +286,7 @@ def register_licence(data: dict, filename: Path, abs_data_path: Path, category: 
 
 def register_asset(data: dict, filename: Path, abs_data_path: Path, category: str, role: str, data_type=None):
     files = []   
-    files.append(create_file_data(filename, abs_data_path, category, role))
+    files.append(create_file_data(filename, abs_data_path, category, role, None))
     if data_type:
         if data_type in data:
             data[data_type].extend(files)
@@ -295,7 +297,7 @@ def register_asset(data: dict, filename: Path, abs_data_path: Path, category: st
         data.update(files[0])
 
 
-def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path, asset_data: dict, asset_did: str):
+def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path, asset_data: dict, asset_info: dict):
     if not path.exists():
         return
     
@@ -311,9 +313,9 @@ def register_folder(data: list, user_data: dict, path: Path, abs_data_path: Path
         role = file_data['role']
 
         # add to json data
-        file_entry = create_file_data(filename, abs_data_path, category, role)
+        file_entry = create_file_data(filename, abs_data_path, category, role, asset_info)
         if category == 'isMetadata':
-            file_entry['manifest:iri'] = asset_did
+            file_entry['manifest:iri'] = asset_info['did']
             file_entry['skos:note'] = f'This is the domain metadata for a {asset_data["type"]}.'
             file_entry['sh:conformsTo'] = [f'{g_envited_url}{asset_data["classname"]}/{g_version}/ontology']
                      
@@ -413,6 +415,7 @@ def get_name_description_from_domainMetadata(filename, type):
 
     return name, description
 
+
 def get_asset(user_data):
     for file in user_data:
         if file['category'] == 'isSimulationData' and file['type'] == 'Asset':
@@ -422,12 +425,42 @@ def get_asset(user_data):
             return asset_name, asset_extension
     return None, None
 
+
+def get_asset_info(asset_json : Path, asset_extractor : Path) -> dict:
+    
+    # load asset json
+    if not asset_json.is_absolute():
+        asset_json = asset_json.resolve()     
+    if not asset_json.exists():
+        logger.error(f'asset file {asset_json} not exists')
+        exit(1)
+    with open(asset_json, 'r') as file:
+        asset_json_data = json.load(file)
+    asset_info = {}
+    asset_info['did'] = asset_json_data['@id'] # to get did
+
+    # load asset extractor data
+    if not asset_extractor.is_absolute():
+        asset_extractor = asset_extractor.resolve()   
+    if not asset_extractor.exists():
+        logger.error(f'asset file {asset_extractor} not exists')
+        exit(1) 
+    with open(asset_extractor, 'r') as file:
+        asset_extractor_data = json.load(file)
+
+    if 'recordingTime' in asset_extractor_data:
+        asset_info['recordingTime'] = asset_extractor_data['recordingTime']    # to get recordingTime
+
+    return asset_info
+
+
 def main():
     parser = argparse.ArgumentParser(prog='main.py', description='the folder structure is completed from the user info and a metadata table is created for the manifest')   
     parser.add_argument('filename', help='filename of json file from frontend.')
     parser.add_argument('-out', help='json file for manifest.')
     parser.add_argument('-path', help='path to copy/parse data.')
-    parser.add_argument('-asset', help='filename to final asset json.')
+    parser.add_argument('-asset_json', help='filename to final asset json.')
+    parser.add_argument('-asset_extractor', help='filename to temp asset json.')
     args = parser.parse_args()
 
     user_input_file = Path(args.filename)
@@ -452,16 +485,9 @@ def main():
 
     manifest_uuid = create_uuid()
 
-    # get asset uuid
-    asset_json = Path(args.asset)
-    if not asset_json.is_absolute():
-        asset_json = data_path.resolve()
-    if not asset_json.exists():
-        logger.error(f'asset file {asset_json} not exists')
-        exit(1)
-    with open(asset_json, 'r') as file:
-        asset_json_data = json.load(file)
-    asset_did = asset_json_data['@id']
+    # get asset info (uuid, recordingTime)
+    asset_json = Path(args.asset_json)
+    asset_info = get_asset_info(asset_json, Path(args.asset_extractor))
 
     # initialize asset_name
     asset_name, asset_extension = get_asset(user_data)
@@ -519,7 +545,7 @@ def main():
         relative_path = str(sub_folder.relative_to(data_path))
         if relative_path == 'temp':
             continue
-        register_folder(data_group, user_data, sub_folder, data_path, asset_data, asset_did)
+        register_folder(data_group, user_data, sub_folder, data_path, asset_data, asset_info)
 
     # register license
     # TODO get license from file or user input link/type

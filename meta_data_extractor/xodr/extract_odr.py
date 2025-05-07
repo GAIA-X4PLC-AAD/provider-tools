@@ -95,12 +95,7 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     # convert to datetime object
     hasDataResource_dict = dict()
     #general_data_dict = dict()
-    #try:        
-        #supported_date_syntax = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y", "%Y/%m/%d", "%d.%m.%Y", "%m/%d/%Y"]
-        #general_data_dict['general:recordingTime'] = convert_date_time(data['header']['date'], supported_date_syntax) if check_data(root,".//header","date") else default_value
-        #hasDataResource_dict['general:data'] = general_data_dict
-    #except:
-    #    logger.error('cannot extract date')
+
     
     # parse string of georeference
     # set all values to default
@@ -222,6 +217,12 @@ def get_meta_data(file_path: str, default_value: str) -> dict:
     meta_data_dict['did'] = 'did:web:registry.gaia-x.eu:HdMap:' + create_uuid()
     meta_data_dict['shacl_type'] = f'{get_schema_name().lower()}::{get_namespace()}#{get_schema_name()}Shape'
     meta_data_dict[f'{get_schema_name().lower()}:hasDataResource'] = hasDataResource_dict    
+
+    try:        
+        supported_date_syntax = ["%Y-%m-%d", "%d-%m-%Y", "%m-%d-%Y", "%Y/%m/%d", "%d.%m.%Y", "%m/%d/%Y"]
+        meta_data_dict['recordingTime'] = convert_date_time(data['header']['date'], supported_date_syntax) if check_data(root,".//header","date") else default_value
+    except:
+        logger.error('cannot extract date')    
 
     hasDataResourceExtension_dict = dict()
     hasDataResourceExtension_dict[f'{get_schema_name().lower()}:hasFormat'] = format_dict

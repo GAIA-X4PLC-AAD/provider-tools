@@ -452,6 +452,17 @@ def main():
 
     manifest_uuid = create_uuid()
 
+    # get asset uuid
+    asset_json = Path(args.asset)
+    if not asset_json.is_absolute():
+        asset_json = data_path.resolve()
+    if not asset_json.exists():
+        logger.error(f'asset file {asset_json} not exists')
+        exit(1)
+    with open(asset_json, 'r') as file:
+        asset_json_data = json.load(file)
+    asset_did = asset_json_data['@id']
+
     # initialize asset_name
     asset_name, asset_extension = get_asset(user_data)
     if not asset_name or not asset_extension:
@@ -459,7 +470,6 @@ def main():
         exit(1)
     if asset_extension in asset_type:        
         asset_data = asset_type[asset_extension]
-        asset_did = f'did:web:registry.gaia-x.eu:{asset_data["category"]}:{manifest_uuid}'
 
     # copy files
     upload_folder = user_input_file.parent
@@ -501,7 +511,7 @@ def main():
 
     # create json file for jsonLD creator
     data = {}
-    data['did'] = 'did:web:registry.gaia-x.eu:Manifest:' + create_uuid()
+    data['did'] = 'did:web:registry.gaia-x.eu:Manifest:' + manifest_uuid
     data['shacl_type'] = f'{g_envitedX}::{g_envited_url}{g_envitedX}/{g_version}/ontology#ManifestShape'
     data_group = []
     data['manifest:hasArtifacts'] = data_group
@@ -551,18 +561,10 @@ def main():
     with open(filename_out, 'w') as f:
         json.dump(data, f, indent=4)
 
-    # replace manifest uuid in asset json
-    asset_json = Path(args.asset)
-    if not asset_json.is_absolute():
-        asset_json = data_path.resolve()
-    if not asset_json.exists():
-        logger.error(f'asset file {asset_json} not exists')
-        exit(1)
-
     # replace with uuid in json
-    content = asset_json.read_text(encoding="utf-8")
-    content = content.replace("Manifest:uuid", f"Manifest:{manifest_uuid}")
-    asset_json.write_text(content, encoding="utf-8")
+    asset_content = asset_json.read_text(encoding="utf-8")
+    asset_content = asset_content.replace("Manifest:uuid", f"Manifest:{manifest_uuid}")
+    asset_json.write_text(asset_content, encoding="utf-8")
 
 if __name__ == '__main__':
     main()

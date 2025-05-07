@@ -10,13 +10,12 @@
 
 
 from datetime import datetime
-from rdflib.namespace import SH, RDF
-from rdflib import Graph, URIRef, BNode
-from rdflib.collection import Collection
+from rdflib.namespace import SH
+from rdflib import Graph, URIRef
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Tuple, Union, Dict, List
-from utils.utils import download_shacle, get_url_for_download, get_prefixes
+from utils.utils import download_shacle, get_url_for_download, get_prefixes, convert_graph_to_dict
 #from utils.log_config import setup_logging # debug
 import shutil
 import json
@@ -165,7 +164,6 @@ def get_value_type(key : str, shacl_values : dict) -> str:
         "minExclusive", "maxExclusive",
         "languageIn"
     ]
-    #object_constraints = ["class", "node", "nodeKind"]
     value_key = (
         "@value"
         if any(get_value(name, shacl_values) for name in literal_constraints)
@@ -507,61 +505,16 @@ def process_graph(schema_namespace, schema_name, meta_data):
                 logger.warning("non-transferring values:")
                 logger.warning(json.dumps(meta_data, indent=4, ensure_ascii=False))
 
-        # end end remove envited-x prefix
+        # TODO: hmm, we get valdation errors for manifest if we have envited-x prefix
         if g_envited_x_str in config.JSON_OUT['@context']:
-            del config.JSON_OUT['@context'][g_envited_x_str]        
+            del config.JSON_OUT['@context'][g_envited_x_str]  
+        # remove unused rfd prefix
+        if 'rdf' in config.JSON_OUT['@context']:
+            del config.JSON_OUT['@context']['rdf']        
     else:
         logger.error(f'Cannot find ontology {schema_namespace}')
     
     return
-
-
-#    Recursive function to “resolve” a value.
-#    If it is a blank node, it is checked whether it is an RDF list.
-#    Otherwise, an attempt is made to convert the blank node into a dict.
-def resolve_value(graph, value):
-    if isinstance(value, BNode):
-        # Check whether it is an RDF list
-        if (value, RDF.first, None) in graph:
-            try:
-                items = list(Collection(graph, value))
-                return [resolve_value(graph, it) for it in items]
-            except Exception as e:
-                # Fallback: recursive conversion of the BNode into a dict
-                return convert_bnode_to_dict(graph, value)
-        else:
-            # If not as a list, then try to convert the BNode into a dict.
-            return convert_bnode_to_dict(graph, value)
-    else:
-        # For URIs or literals, simply return as a string
-        return str(value)
-
-
-# convert blank node recursive to dict
-def convert_bnode_to_dict(graph, bnode):
-    result = {}
-    for pred, obj in graph.predicate_objects(bnode):
-        result[str(pred)] = resolve_value(graph, obj)
-    return result
-
-
-# convert rdf graph to dict, resolve blank nodes
-def convert_graph_to_dict(graph, search_node_shape: bool):
-    graph_dict = {}
-    type_to_search = SH.NodeShape if search_node_shape else SH.NodeKind
-    for node_shape in graph.subjects(RDF.type, type_to_search):
-
-        prop_list = []
-        for prop in graph.objects(node_shape, SH.property):    
-
-            values_dict = {}
-            for detail, value in graph.predicate_objects(prop):
-                values_dict[str(detail)] = resolve_value(graph, value)
-
-            prop_list.append(values_dict)
-        graph_dict[str(node_shape)] = prop_list
-
-    return graph_dict
 
 
 # create shacl data structure and register

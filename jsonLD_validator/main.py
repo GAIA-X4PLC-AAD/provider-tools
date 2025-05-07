@@ -2,7 +2,7 @@ from pathlib import Path
 from pyshacl import validate
 from rdflib.namespace import SH, RDF
 from rdflib import Graph, Literal
-from utils.utils import download_shacle, get_url_for_download, get_prefixes, load_shacl_files, load_jsonld_file
+from utils.utils import load_jsonld_file, get_shacle_from_json_graph
 
 import argparse
 import logging
@@ -14,16 +14,14 @@ gaiax_url_part = 'GAIA-X4PLC-AAD/ontology-management-base'
 
 def validate_jsonld_against_shacl(data_graph : Graph, shacl_graph : Graph, json_LD_file: Path):
     conforms, v_graph, v_text = validate(data_graph, shacl_graph=shacl_graph, 
-                                         #data_graph_format='json-ld', 
                                          inference='rdfs', 
                                          abort_on_first=False,
-                                         advanced=True,  # Erweitertes Validierungsverhalten
-                                         allow_warnings=True  # Gibt Warnungen statt Fehler, falls nötig
+                                         advanced=True,  # enahced validation behavior
+                                         allow_warnings=True  # print also warnings
                                          #debug=False
                                          )
     if not conforms:
-        logger.error(f'####### Validation errors for {json_LD_file}: #######')
-        #logger.error(v_text)        
+        logger.error(f'####### Validation errors for {json_LD_file}: #######')   
         # Iterate over all ValidationResult nodes
         for result in v_graph.subjects(RDF.type, SH.ValidationResult):
             # Extract severity (e.g., Violation or Warning)
@@ -54,15 +52,7 @@ def main():
     data_graph = load_jsonld_file(json_LD_file)
 
     # load shacls
-    shacl_folder = Path(__file__).parent.resolve() / 'shacles'
-    if not shacl_folder.exists():
-        shacl_folder.mkdir()   
-    prefixes = get_prefixes(data_graph)
-    shacl_files = []
-    for key, value in prefixes.items():
-        new_url_path = get_url_for_download(value)
-        shacl_files.append(download_shacle(new_url_path, key))
-    shacl_graph = load_shacl_files(shacl_files)
+    shacl_graph = get_shacle_from_json_graph(data_graph)
 
     # find all closed tags and set to True
     if args.closed:
